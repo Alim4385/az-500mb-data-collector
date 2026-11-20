@@ -1,8 +1,10 @@
-# Hüceyrə 7 — MƏRHƏLƏ A — paralel yığım (datatrove)
+# Hüceyrə 7 — MƏRHƏLƏ A — paralel yığım
 
 **MÜTLƏQ** · Vaxt: 8–15 dəq
 
-**4 CPU nüvə ilə paralel.** Parquet oxuyur, filtrləyir, namizədləri `/kaggle/working/pool/` qovluğuna yazır.
+**4 CPU nüvə paralel** (datatrove). Parquet oxuyur, filtrləyir, namizədləri `pool/` qovluğuna yazır.
+
+**Görməlisən:** `MƏRHƏLƏ A bitdi: X deqiqe` + hovuz cədvəli
 
 ```python
 # ------------------------------------------------------------
@@ -109,7 +111,8 @@ ADAPTERS = {"smoltalk": adapter_smoltalk, "opus": adapter_opus}
 print("MƏRHƏLƏ A baslayir...")
 print(f"Novbe sayi: {WORKERS}, tapsiriq: {TASKS}, her menbeden max {PER_SOURCE_LIMIT} sened\n")
 
-t_all = time.time() if "time" in dir() else None
+import importlib
+importlib.invalidate_caches()
 import time as _time
 T0 = _time.time()
 

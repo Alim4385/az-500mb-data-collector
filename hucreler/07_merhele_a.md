@@ -2,16 +2,15 @@
 
 **MÜTLƏQ** · Vaxt: 8–15 dəq
 
-**4 CPU nüvə paralel** (datatrove). Parquet oxuyur, filtrləyir, namizədləri `pool/` qovluğuna yazır.
+**4 CPU nüvə paralel** (datatrove). Namizədləri `/tmp/pool/` qovluğuna **düz `.jsonl`** kimi yazır — **gz yoxdur**.
 
-**Görməlisən:** `MƏRHƏLƏ A bitdi: X deqiqe` + hovuz cədvəli
+**Görməlisən:** `MƏRHƏLƏ A bitdi` + hovuz cədvəli
 
 ```python
 # ------------------------------------------------------------
 # MƏRHƏLƏ A — PARALEL YIĞIM (datatrove, 4 nüvə)
-# Bu hüceyrə ağır işi görür: parquet oxumaq + filtrləmək.
-# Nəticə: /kaggle/working/pool/<kateqoriya>/*.jsonl.gz (namizədlər)
-# Vaxt: ~10-20 dəqiqə
+# Namizədləri /tmp/pool qovluğuna DÜZ .jsonl kimi yazır (GZ YOXDUR).
+# Vaxt: ~8-15 dəqiqə
 # ------------------------------------------------------------
 import os
 import sys
@@ -21,23 +20,28 @@ import subprocess
 try:
     import datatrove
 except ImportError:
-    print("datatrove qurasdirilir...")
+    print("datatrove qurasdirilir (30-60 saniye)...")
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "datatrove", "pyarrow"], check=False)
+
+import importlib
+importlib.invalidate_caches()
+import time
 
 from datatrove.executor import LocalPipelineExecutor
 from datatrove.pipeline.readers import ParquetReader
 from datatrove.pipeline.filters.base_filter import BaseFilter
 from datatrove.pipeline.writers import JsonlWriter
 
-POOL_DIR = "/kaggle/working/pool"
+# /tmp - Kaggle Save Version-a DAXIL DEYIL (cox yer tutmur, suretli saxlanir)
+POOL_DIR = "/tmp/pool"
 os.makedirs(POOL_DIR, exist_ok=True)
 
-WORKERS = 4              # Kaggle-da 4 CPU nuve
-TASKS = 8                # bolgü sayi (cox olsa pis deyil)
-PER_SOURCE_LIMIT = 250_000   # her menbeden max sened sayi
-START_METHOD = "fork"    # notebook-da multiprocessing ucun lazimdir
+POOL_COMPRESSION = None      # None = duz .jsonl  |  "gzip" = .jsonl.gz
+WORKERS = 4                  # Kaggle-da 4 CPU nuve
+TASKS = 8
+PER_SOURCE_LIMIT = 250_000   # her menbeden max sened (bir gedişde)
+START_METHOD = "fork"        # notebook-da multiprocessing ucun MUTLEQ
 
-# ---------- adapterler (mueyyen sutunlari olan datasetler ucun) ----------
 def adapter_smoltalk(self, data, path, id_in_file):
     """messages_az: [{'role':..,'content':..}, ...] -> metn"""
     parts = []
@@ -56,7 +60,6 @@ def adapter_opus(self, data, path, id_in_file):
         return {"text": t.get("az") or "", "id": str(id_in_file)}
     return {"text": "", "id": str(id_in_file)}
 
-# ---------- filtr ----------
 class AzKeep(BaseFilter):
     """Bizim filtrler - datatrove icinde, her nuvede ayrica isleyir."""
     name = "AzKeep"
@@ -71,7 +74,7 @@ class AzKeep(BaseFilter):
             return False
         if len(raw) > LONG_MAX * 3:
             return False
-        text = " ".join(raw.split())   # re.sub-dan 3x suretli
+        text = " ".join(raw.split())      # re.sub-dan 3x suretli
         if len(text) < SHORT_MIN:
             return False
         tokens = tokenize(text)
@@ -83,9 +86,8 @@ class AzKeep(BaseFilter):
         doc.text = text
         return True
 
-# ---------- menbe siyahisi (Mərhələ A ucun) ----------
-# qeyd: 05_fiction burada YOXDUR - kitablar setir-setirlidir,
-# onlari Merhele B-de ayrica yigiriq.
+# ---------- menbe siyahisi (Merhele A ucun) ----------
+# 05_fiction burada YOXDUR - kitablar setir-setirlidir, Merhele B-de yigilir.
 PHASE_A = {
     "01_web_news": [
         {"folder": "hf://datasets/HuggingFaceFW/fineweb-2/data/azj_Latn/train", "check_lang": False},
@@ -107,58 +109,77 @@ PHASE_A = {
 }
 
 ADAPTERS = {"smoltalk": adapter_smoltalk, "opus": adapter_opus}
+PHASE_A_STATE = {}      # her menbeden ne qeder oxundu (top-up ucun)
+
+def run_phase_a(cats=None, limit=None, tag="", quiet=False):
+    """Kateqoriyalari (ve ya hamisini) paralel yigir. Merhele B-den de cagirila biler."""
+    lim = limit or PER_SOURCE_LIMIT
+    per_task = max(1, lim // TASKS)
+    targets = cats if cats else list(PHASE_A.keys())
+    t_start = time.time()
+    for cat in targets:
+        for si, spec in enumerate(PHASE_A.get(cat, [])):
+            name = spec["folder"].split("/")[-2] + "_" + spec["folder"].split("/")[-1]
+            name = re.sub(r"[^A-Za-z0-9_.-]", "_", name)[:60]
+            key = (cat, si)
+            skip = PHASE_A_STATE.get(key, 0)
+
+            out_dir = os.path.join(POOL_DIR, cat)
+            os.makedirs(out_dir, exist_ok=True)
+            log_dir = os.path.join(POOL_DIR, "_logs", cat, f"{si}_{name}_{tag or 'main'}")
+
+            reader_kw = {"limit": per_task, "skip": skip, "batch_size": 1000}
+            if "adapter" in spec:
+                reader_kw["adapter"] = ADAPTERS[spec["adapter"]]
+            if "text_key" in spec:
+                reader_kw["text_key"] = spec["text_key"]
+
+            if not quiet:
+                print(f"\n>>> {cat} | {spec['folder']}  (oxunacaq: {per_task}, atlanacaq: {skip})")
+            t0 = time.time()
+            try:
+                LocalPipelineExecutor(
+                    pipeline=[
+                        ParquetReader(spec["folder"], **reader_kw),
+                        AzKeep(check_lang=spec.get("check_lang", True)),
+                        JsonlWriter(out_dir, output_filename="${rank}.jsonl",
+                                    compression=POOL_COMPRESSION),
+                    ],
+                    tasks=TASKS,
+                    workers=WORKERS,
+                    logging_dir=log_dir,
+                    start_method=START_METHOD,
+                    skip_completed=False,
+                ).run()
+                PHASE_A_STATE[key] = skip + per_task
+                if not quiet:
+                    print(f"<<< {cat} | {name} bitdi: {time.time()-t0:.0f} saniye")
+            except Exception as e:
+                print(f"<<< XETA {cat} | {name}: {type(e).__name__}: {str(e)[:200]}")
+                print("    (bu menbe atlanir, qalanlar davam edir)")
+    if not quiet:
+        print(f"\nVaxt: {(time.time()-t_start)/60:.1f} deqiqe")
+
+def pool_stats():
+    """Hovuzda ne var - cap edir."""
+    print("\nHovuzdaki namizedler:")
+    total = 0
+    for cat in TARGETS_MB:
+        d = os.path.join(POOL_DIR, cat)
+        if not os.path.isdir(d):
+            print(f"  {cat:28} 0 fayl, 0.0 MB")
+            continue
+        files = [f for f in os.listdir(d) if f.endswith((".jsonl", ".jsonl.gz"))]
+        size = sum(os.path.getsize(os.path.join(d, f)) for f in files) / 1048576
+        total += size
+        print(f"  {cat:28} {len(files)} fayl, {size:.1f} MB")
+    print(f"  {'CEMI':28} {total:.1f} MB")
 
 print("MƏRHƏLƏ A baslayir...")
-print(f"Novbe sayi: {WORKERS}, tapsiriq: {TASKS}, her menbeden max {PER_SOURCE_LIMIT} sened\n")
+print(f"Novbe: {WORKERS} nüvə | tapsiriq: {TASKS} | her menbeden max {PER_SOURCE_LIMIT} sened")
+print(f"Hovuz: {POOL_DIR} | format: {'duz .jsonl' if POOL_COMPRESSION is None else 'jsonl.gz'}")
 
-import importlib
-importlib.invalidate_caches()
-import time as _time
-T0 = _time.time()
-
-for cat, specs in PHASE_A.items():
-    for si, spec in enumerate(specs):
-        out_dir = os.path.join(POOL_DIR, cat)
-        os.makedirs(out_dir, exist_ok=True)
-        name = spec["folder"].split("/")[-2] + "_" + spec["folder"].split("/")[-1]
-        name = re.sub(r"[^A-Za-z0-9_.-]", "_", name)[:60]
-        log_dir = os.path.join(POOL_DIR, "_logs", cat, f"{si}_{name}")
-
-        reader_kw = {"limit": PER_SOURCE_LIMIT // TASKS, "batch_size": 1000}
-        if "adapter" in spec:
-            reader_kw["adapter"] = ADAPTERS[spec["adapter"]]
-        if "text_key" in spec:
-            reader_kw["text_key"] = spec["text_key"]
-
-        t0 = _time.time()
-        print(f"\n>>> {cat} | {spec['folder']}")
-        try:
-            executor = LocalPipelineExecutor(
-                pipeline=[
-                    ParquetReader(spec["folder"], **reader_kw),
-                    AzKeep(check_lang=spec.get("check_lang", True)),
-                    JsonlWriter(out_dir, output_filename="${rank}.jsonl"),
-                ],
-                tasks=TASKS,
-                workers=WORKERS,
-                logging_dir=log_dir,
-                start_method=START_METHOD,
-                skip_completed=False,
-            )
-            executor.run()
-            print(f"<<< {cat} | {name} bitdi: {_time.time()-t0:.0f} saniye")
-        except Exception as e:
-            print(f"<<< XETA {cat} | {name}: {type(e).__name__}: {str(e)[:200]}")
-            print("    (bu menbe atlanir, qalanlar davam edir)")
-
-print(f"\nMƏRHƏLƏ A bitdi: {(_time.time()-T0)/60:.1f} deqiqe")
-print("\nHovuzdaki namizedler:")
-for cat in list(PHASE_A.keys()) + ["05_fiction"]:
-    d = os.path.join(POOL_DIR, cat)
-    if not os.path.isdir(d):
-        continue
-    files = [f for f in os.listdir(d) if f.endswith((".jsonl", ".jsonl.gz"))]
-    size = sum(os.path.getsize(os.path.join(d, f)) for f in files) / 1048576
-    print(f"  {cat:28} {len(files)} fayl, {size:.1f} MB (sıxılmış)")
+run_phase_a()
+pool_stats()
 print("\nNovbeti hucreye kec: MERHELE B")
 ```

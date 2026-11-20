@@ -4,7 +4,7 @@
 
 Gated datasetlər üçün. Token olmasa da hər şey işləyir.
 
-**Görməlisən:** `[!] HF token yoxdur...` — bu **xəta deyil**, normaldır
+**Görməlisən:** `[!] HF token yoxdur...` — bu **xəta deyil**
 
 ```python
 # ------------------------------------------------------------

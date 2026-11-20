@@ -1,5 +1,4 @@
-# AZ 500 MB DATA YIGICI - SIFIRDAN VERSIYA
-# KODLAR.md ile tam eyni (8 hucre)
+# AZ 500 MB DATA YIGICI - SIFIRDAN (8 hucre)
 
 import os
 import re
@@ -299,9 +298,8 @@ print("Diger xetalar olsa, hemin menbe sadece atlanacaq, qalanlar isleyecek.")
 
 # ------------------------------------------------------------
 # MƏRHƏLƏ A — PARALEL YIĞIM (datatrove, 4 nüvə)
-# Bu hüceyrə ağır işi görür: parquet oxumaq + filtrləmək.
-# Nəticə: /kaggle/working/pool/<kateqoriya>/*.jsonl.gz (namizədlər)
-# Vaxt: ~10-20 dəqiqə
+# Namizədləri /tmp/pool qovluğuna DÜZ .jsonl kimi yazır (GZ YOXDUR).
+# Vaxt: ~8-15 dəqiqə
 # ------------------------------------------------------------
 import os
 import sys
@@ -311,23 +309,28 @@ import subprocess
 try:
     import datatrove
 except ImportError:
-    print("datatrove qurasdirilir...")
+    print("datatrove qurasdirilir (30-60 saniye)...")
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "datatrove", "pyarrow"], check=False)
+
+import importlib
+importlib.invalidate_caches()
+import time
 
 from datatrove.executor import LocalPipelineExecutor
 from datatrove.pipeline.readers import ParquetReader
 from datatrove.pipeline.filters.base_filter import BaseFilter
 from datatrove.pipeline.writers import JsonlWriter
 
-POOL_DIR = "/kaggle/working/pool"
+# /tmp - Kaggle Save Version-a DAXIL DEYIL (cox yer tutmur, suretli saxlanir)
+POOL_DIR = "/tmp/pool"
 os.makedirs(POOL_DIR, exist_ok=True)
 
-WORKERS = 4              # Kaggle-da 4 CPU nuve
-TASKS = 8                # bolgü sayi (cox olsa pis deyil)
-PER_SOURCE_LIMIT = 250_000   # her menbeden max sened sayi
-START_METHOD = "fork"    # notebook-da multiprocessing ucun lazimdir
+POOL_COMPRESSION = None      # None = duz .jsonl  |  "gzip" = .jsonl.gz
+WORKERS = 4                  # Kaggle-da 4 CPU nuve
+TASKS = 8
+PER_SOURCE_LIMIT = 250_000   # her menbeden max sened (bir gedişde)
+START_METHOD = "fork"        # notebook-da multiprocessing ucun MUTLEQ
 
-# ---------- adapterler (mueyyen sutunlari olan datasetler ucun) ----------
 def adapter_smoltalk(self, data, path, id_in_file):
     """messages_az: [{'role':..,'content':..}, ...] -> metn"""
     parts = []
@@ -346,7 +349,6 @@ def adapter_opus(self, data, path, id_in_file):
         return {"text": t.get("az") or "", "id": str(id_in_file)}
     return {"text": "", "id": str(id_in_file)}
 
-# ---------- filtr ----------
 class AzKeep(BaseFilter):
     """Bizim filtrler - datatrove icinde, her nuvede ayrica isleyir."""
     name = "AzKeep"
@@ -361,7 +363,7 @@ class AzKeep(BaseFilter):
             return False
         if len(raw) > LONG_MAX * 3:
             return False
-        text = " ".join(raw.split())   # re.sub-dan 3x suretli
+        text = " ".join(raw.split())      # re.sub-dan 3x suretli
         if len(text) < SHORT_MIN:
             return False
         tokens = tokenize(text)
@@ -373,9 +375,8 @@ class AzKeep(BaseFilter):
         doc.text = text
         return True
 
-# ---------- menbe siyahisi (Mərhələ A ucun) ----------
-# qeyd: 05_fiction burada YOXDUR - kitablar setir-setirlidir,
-# onlari Merhele B-de ayrica yigiriq.
+# ---------- menbe siyahisi (Merhele A ucun) ----------
+# 05_fiction burada YOXDUR - kitablar setir-setirlidir, Merhele B-de yigilir.
 PHASE_A = {
     "01_web_news": [
         {"folder": "hf://datasets/HuggingFaceFW/fineweb-2/data/azj_Latn/train", "check_lang": False},
@@ -397,76 +398,94 @@ PHASE_A = {
 }
 
 ADAPTERS = {"smoltalk": adapter_smoltalk, "opus": adapter_opus}
+PHASE_A_STATE = {}      # her menbeden ne qeder oxundu (top-up ucun)
+
+def run_phase_a(cats=None, limit=None, tag="", quiet=False):
+    """Kateqoriyalari (ve ya hamisini) paralel yigir. Merhele B-den de cagirila biler."""
+    lim = limit or PER_SOURCE_LIMIT
+    per_task = max(1, lim // TASKS)
+    targets = cats if cats else list(PHASE_A.keys())
+    t_start = time.time()
+    for cat in targets:
+        for si, spec in enumerate(PHASE_A.get(cat, [])):
+            name = spec["folder"].split("/")[-2] + "_" + spec["folder"].split("/")[-1]
+            name = re.sub(r"[^A-Za-z0-9_.-]", "_", name)[:60]
+            key = (cat, si)
+            skip = PHASE_A_STATE.get(key, 0)
+
+            out_dir = os.path.join(POOL_DIR, cat)
+            os.makedirs(out_dir, exist_ok=True)
+            log_dir = os.path.join(POOL_DIR, "_logs", cat, f"{si}_{name}_{tag or 'main'}")
+
+            reader_kw = {"limit": per_task, "skip": skip, "batch_size": 1000}
+            if "adapter" in spec:
+                reader_kw["adapter"] = ADAPTERS[spec["adapter"]]
+            if "text_key" in spec:
+                reader_kw["text_key"] = spec["text_key"]
+
+            if not quiet:
+                print(f"\n>>> {cat} | {spec['folder']}  (oxunacaq: {per_task}, atlanacaq: {skip})")
+            t0 = time.time()
+            try:
+                LocalPipelineExecutor(
+                    pipeline=[
+                        ParquetReader(spec["folder"], **reader_kw),
+                        AzKeep(check_lang=spec.get("check_lang", True)),
+                        JsonlWriter(out_dir, output_filename="${rank}.jsonl",
+                                    compression=POOL_COMPRESSION),
+                    ],
+                    tasks=TASKS,
+                    workers=WORKERS,
+                    logging_dir=log_dir,
+                    start_method=START_METHOD,
+                    skip_completed=False,
+                ).run()
+                PHASE_A_STATE[key] = skip + per_task
+                if not quiet:
+                    print(f"<<< {cat} | {name} bitdi: {time.time()-t0:.0f} saniye")
+            except Exception as e:
+                print(f"<<< XETA {cat} | {name}: {type(e).__name__}: {str(e)[:200]}")
+                print("    (bu menbe atlanir, qalanlar davam edir)")
+    if not quiet:
+        print(f"\nVaxt: {(time.time()-t_start)/60:.1f} deqiqe")
+
+def pool_stats():
+    """Hovuzda ne var - cap edir."""
+    print("\nHovuzdaki namizedler:")
+    total = 0
+    for cat in TARGETS_MB:
+        d = os.path.join(POOL_DIR, cat)
+        if not os.path.isdir(d):
+            print(f"  {cat:28} 0 fayl, 0.0 MB")
+            continue
+        files = [f for f in os.listdir(d) if f.endswith((".jsonl", ".jsonl.gz"))]
+        size = sum(os.path.getsize(os.path.join(d, f)) for f in files) / 1048576
+        total += size
+        print(f"  {cat:28} {len(files)} fayl, {size:.1f} MB")
+    print(f"  {'CEMI':28} {total:.1f} MB")
 
 print("MƏRHƏLƏ A baslayir...")
-print(f"Novbe sayi: {WORKERS}, tapsiriq: {TASKS}, her menbeden max {PER_SOURCE_LIMIT} sened\n")
+print(f"Novbe: {WORKERS} nüvə | tapsiriq: {TASKS} | her menbeden max {PER_SOURCE_LIMIT} sened")
+print(f"Hovuz: {POOL_DIR} | format: {'duz .jsonl' if POOL_COMPRESSION is None else 'jsonl.gz'}")
 
-import importlib
-importlib.invalidate_caches()
-import time as _time
-T0 = _time.time()
-
-for cat, specs in PHASE_A.items():
-    for si, spec in enumerate(specs):
-        out_dir = os.path.join(POOL_DIR, cat)
-        os.makedirs(out_dir, exist_ok=True)
-        name = spec["folder"].split("/")[-2] + "_" + spec["folder"].split("/")[-1]
-        name = re.sub(r"[^A-Za-z0-9_.-]", "_", name)[:60]
-        log_dir = os.path.join(POOL_DIR, "_logs", cat, f"{si}_{name}")
-
-        reader_kw = {"limit": PER_SOURCE_LIMIT // TASKS, "batch_size": 1000}
-        if "adapter" in spec:
-            reader_kw["adapter"] = ADAPTERS[spec["adapter"]]
-        if "text_key" in spec:
-            reader_kw["text_key"] = spec["text_key"]
-
-        t0 = _time.time()
-        print(f"\n>>> {cat} | {spec['folder']}")
-        try:
-            executor = LocalPipelineExecutor(
-                pipeline=[
-                    ParquetReader(spec["folder"], **reader_kw),
-                    AzKeep(check_lang=spec.get("check_lang", True)),
-                    JsonlWriter(out_dir, output_filename="${rank}.jsonl"),
-                ],
-                tasks=TASKS,
-                workers=WORKERS,
-                logging_dir=log_dir,
-                start_method=START_METHOD,
-                skip_completed=False,
-            )
-            executor.run()
-            print(f"<<< {cat} | {name} bitdi: {_time.time()-t0:.0f} saniye")
-        except Exception as e:
-            print(f"<<< XETA {cat} | {name}: {type(e).__name__}: {str(e)[:200]}")
-            print("    (bu menbe atlanir, qalanlar davam edir)")
-
-print(f"\nMƏRHƏLƏ A bitdi: {(_time.time()-T0)/60:.1f} deqiqe")
-print("\nHovuzdaki namizedler:")
-for cat in list(PHASE_A.keys()) + ["05_fiction"]:
-    d = os.path.join(POOL_DIR, cat)
-    if not os.path.isdir(d):
-        continue
-    files = [f for f in os.listdir(d) if f.endswith((".jsonl", ".jsonl.gz"))]
-    size = sum(os.path.getsize(os.path.join(d, f)) for f in files) / 1048576
-    print(f"  {cat:28} {len(files)} fayl, {size:.1f} MB (sıxılmış)")
+run_phase_a()
+pool_stats()
 print("\nNovbeti hucreye kec: MERHELE B")
 
 # ------------------------------------------------------------
-# MƏRHƏLƏ B — SOZ LIMITI + BALANS + YAZMA
-# Hovuzdaki namizedleri oxuyur (yerli fayllar, suretlidir),
-# global 3000 soz limitini tetbiq edir, 70/30 balans qurur,
-# tam 500 MB az_all.txt yazir.
+# MƏRHƏLƏ B — SOZ LIMITI + BALANS + TAM 500 MB
+# Hovuzdan oxuyur, qlobal 3000 limitini tetbiq edir, 70/30 balans
+# qurur, tam 500 MB az_all.txt yazir. Catismayan olsa, hovuzu
+# AVTOMATIK genislendirir (Merhele A-ni yeniden cagirir).
 # Vaxt: 5-10 deqiqe
 # ------------------------------------------------------------
 import glob
-import gzip
 import json
 import time
 
 TOTAL_TARGET_BYTES = 500 * 1024 * 1024
 MAX_WORD_COUNT = 3000
-POOL_DIR = "/kaggle/working/pool"
+POOL_DIR = "/tmp/pool"
 
 seen_hashes = set()
 word_counts = Counter()
@@ -488,14 +507,15 @@ def vocab_add(tokens):
             word_counts[t] += 1
 
 def iter_pool(cat):
-    """Hovuzdaki jsonl.gz fayllarindan metn axini."""
+    """Hovuzdan metn axini (.jsonl ve ya .jsonl.gz)."""
     d = os.path.join(POOL_DIR, cat)
     if not os.path.isdir(d):
         return
-    for f in sorted(glob.glob(os.path.join(d, "*.jsonl*"))):
-        opener = gzip.open if f.endswith(".gz") else open
+    files = sorted(glob.glob(os.path.join(d, "*.jsonl*")))
+    for f in files:
         try:
-            with opener(f, "rt", encoding="utf-8") as fh:
+            fh = gzip.open(f, "rt", encoding="utf-8") if f.endswith(".gz") else open(f, encoding="utf-8")
+            with fh:
                 for line in fh:
                     line = line.strip()
                     if not line:
@@ -510,8 +530,11 @@ def iter_pool(cat):
         except Exception as e:
             print(f"  [X] {f}: {type(e).__name__}")
 
-# ---------- kitablar (05_fiction) - setir-setir gelir, birlestiririk ----------
+import gzip
+
+# ---------- kitablar (05_fiction) ----------
 CHUNK_CYCLE = [950] * 7 + [6000] * 3
+BOOKS_SKIP = 0
 
 def split_pieces(text, sizes=CHUNK_CYCLE):
     out, pos, i, n = [], 0, 0, len(text)
@@ -531,11 +554,15 @@ def split_pieces(text, sizes=CHUNK_CYCLE):
 
 def iter_books():
     """LocalDoc/books_dataset - ID uzre birlesdirib abzaslara bolur."""
+    global BOOKS_SKIP
     ds = try_load({"id": "LocalDoc/books_dataset"})
     if ds is None:
         return
-    buf, cur, n_docs = [], None, 0
+    if BOOKS_SKIP:
+        ds = ds.skip(BOOKS_SKIP)
+    buf, cur, n_read, n_docs = [], None, 0, 0
     for ex in ds:
+        n_read += 1
         k = ex.get("ID")
         sent = (ex.get(" Sentence") or ex.get("Sentence") or "").strip()
         if cur is None:
@@ -551,7 +578,8 @@ def iter_books():
         for piece in split_pieces(" ".join(buf)):
             yield piece
             n_docs += 1
-    print(f"  [kitablar] {n_docs} abzas hazirlandi")
+    BOOKS_SKIP += n_read
+    print(f"  [kitablar] {n_read} setir oxundu -> {n_docs} abzas")
 
 # ---------- esas dovr ----------
 def collect(cat_name, budget_bytes, stream, mode="w"):
@@ -575,7 +603,7 @@ def collect(cat_name, budget_bytes, stream, mode="w"):
             if len(raw) > LONG_MAX * 3:
                 stats["cox_uzun"] += 1
                 continue
-            text = " ".join(raw.split()) if "  " in raw or "\n" in raw else raw.strip()
+            text = " ".join(raw.split())
             tokens = tokenize(text)
             ok, reason = quality_ok(text, tokens)
             if not ok:
@@ -613,46 +641,52 @@ def collect(cat_name, budget_bytes, stream, mode="w"):
     print(f"=== {cat_name}: {written/1048576:.1f} MB, {p_docs} metn, {time.time()-t0:.0f} saniye ===")
     return written
 
+def fill_all():
+    for cat, mb in TARGETS_MB.items():
+        budget = mb * 1024 * 1024
+        if cat == "05_fiction":
+            got = collect(cat, budget, lambda: iter_pool(cat), "w")
+            if got < budget * 0.98:
+                print("  Kitablardan elave edilir...")
+                collect(cat, budget - got, iter_books, "a")
+        else:
+            collect(cat, budget, lambda: iter_pool(cat), "w")
+
 print("\n########## MƏRHƏLƏ B ##########")
-for cat, mb in TARGETS_MB.items():
-    budget = mb * 1024 * 1024
-    if cat == "05_fiction":
-        # evvel hovuz (varsa), sonra kitablar
-        got = collect(cat, budget, lambda: iter_pool(cat), "w")
-        if got < budget * 0.95:
-            print("  Kitab menbeyinden elave edilir...")
-            collect(cat, budget - got, iter_books, "a")
-    else:
-        collect(cat, budget, lambda: iter_pool(cat), "w")
+fill_all()
+
+# ---------- catismayan olsa: hovuzu avtomatik genislendir ----------
+for attempt in range(1, 4):
+    total = sum(cat_bytes.values())
+    deficit = TOTAL_TARGET_BYTES - total
+    if deficit <= 4096:
+        break
+    need = [c for c in TARGETS_MB if cat_bytes[c] < TARGETS_MB[c] * 1024 * 1024 - 1024]
+    print(f"\n### CATISMAYAN: {deficit/1048576:.1f} MB | genislendirilecek: {need} ###")
+    if not need:
+        break
+    before_bytes = sum(cat_bytes.values())
+    try:
+        run_phase_a(cats=need, limit=PER_SOURCE_LIMIT, tag=f"topup{attempt}")
+    except Exception as e:
+        print(f"  Hovuz genislendirile bilmedi: {type(e).__name__}: {e}")
+        break
+    for cat in need:
+        if cat == "05_fiction":
+            collect(cat, TARGETS_MB[cat] * 1024 * 1024 - cat_bytes[cat], iter_books, "a")
+        else:
+            collect(cat, TARGETS_MB[cat] * 1024 * 1024 - cat_bytes[cat],
+                    lambda c=cat: iter_pool(c), "a")
+    gained = sum(cat_bytes.values()) - before_bytes
+    print(f"  Bu turda elave: +{gained/1048576:.2f} MB")
+    if gained < 1024:
+        print("  Elave data tapilmadi - daha cehd etmirik.")
+        break
 
 total = sum(cat_bytes.values())
 print(f"\nMerhele B neticesi: {total/1048576:.1f} MB")
 
-# ---------- catismayan hisseni doldur ----------
-deficit = TOTAL_TARGET_BYTES - total
-FILL_ORDER = ["01_web_news", "03_encyclopedic_technical", "02_conversation_subtitle",
-              "05_fiction", "04_official_legal"]
-if deficit > 1024:
-    print(f"\n{deficit/1048576:.1f} MB catismir - doldurulur...")
-    for rnd in range(3):
-        if deficit <= 1024:
-            break
-        before = deficit
-        for cat in FILL_ORDER:
-            if deficit <= 1024:
-                break
-            if cat == "05_fiction":
-                got = collect(cat, deficit, iter_books, "a")
-            else:
-                got = collect(cat, deficit, lambda c=cat: iter_pool(c), "a")
-            deficit -= got
-            if got > 0:
-                print(f"  {cat}: +{got/1048576:.1f} MB, qalan {deficit/1048576:.1f} MB")
-        if deficit >= before:
-            print("  Elave data tapilmadi.")
-            break
-
-# ---------- az_all.txt = tam 500 MB ----------
+# ---------- az_all.txt = TAM 500 MB ----------
 print("\n########## az_all.txt (tam 500 MB) ##########")
 ALL_PATH = os.path.join(OUT_DIR, "az_all.txt")
 
@@ -694,10 +728,15 @@ with open(ALL_PATH, "wb") as out:
                     break
                 out.write(chunk)
                 written += len(chunk)
+    # YALNIZ cuzi bosluq (4 KB-dan az) doldurulur - saxta 500 MB yazmiriq
     if written < TOTAL_TARGET_BYTES:
         gap = TOTAL_TARGET_BYTES - written
-        out.write(b"\n" * gap)
-        print(f"  (sona {gap} bayt bos setir)")
+        if gap < 4096:
+            out.write(b"\n" * gap)
+            print(f"  (sona {gap} bayt bos setir elave edildi)")
+        else:
+            print(f"  !!! {gap/1048576:.1f} MB catismir - fayl saxta doldurulmadi")
+            print(f"  !!! Real olcu: {written/1048576:.2f} MB")
 
 # ---------- netice ----------
 print("\n================== UMUMI NETICE ==================")
@@ -714,6 +753,8 @@ print(f"{'KATEQORIYA CEMI':32} {cat_total:9.1f}")
 print(f"{'az_all.txt':32} {all_size/1048576:9.2f}")
 print(f"\nHedef: 500.00 MB | Faktiki: {all_size/1048576:.2f} MB")
 print(f"Bayt: {all_size} / {TOTAL_TARGET_BYTES}")
+if all_size == TOTAL_TARGET_BYTES:
+    print("TAM 500 MB - HAZIRDIR!")
 print(f"Soz limiti: {MAX_WORD_COUNT} | Unikal mezmun soz: {len(word_counts)}")
 print(f"En cox tekrarlanan 10 soz: {word_counts.most_common(10)}")
 print("\nFiltr statistikasi:")
@@ -723,4 +764,5 @@ print("\nCixis qovlugu:", OUT_DIR)
 for fn in sorted(os.listdir(OUT_DIR)):
     fp = os.path.join(OUT_DIR, fn)
     print(f"  {fn:34} {os.path.getsize(fp)/1048576:8.2f} MB")
-print("\nHazirdir! Kaggle -> Save Version -> Output Dataset")
+print("\nButun fayllar duz .txt formatindadir (gz yoxdur).")
+print("Kaggle -> Save Version -> Output Dataset")

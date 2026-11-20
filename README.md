@@ -1,8 +1,10 @@
-# AZ 500MB Data Collector (v3 — datatrove paralel)
+# 🇦🇿 AZ 500MB Data Collector (v3)
 
-Azərbaycan dilində 500 MB təmiz mətn (`.txt`) — LLM / NLLB üçün.
+Azərbaycan dilində **500 MB** təmiz mətn (`.txt`) — LLM / NLLB üçün.
 
-## 👉 KODLAR: [KODLAR.md](KODLAR.md) — 8 hüceyrə, 1 → 8 sıra
+## 👉 SIFIRDAN BƏLƏDÇİ: [KODLAR.md](KODLAR.md)
+
+**8 hüceyrə, 1 → 8 sıra ilə. Ümumi vaxt ~20-25 dəqiqə.**
 
 | # | Fayl | Vacib? | Vaxt |
 |---|---|---|---|
@@ -15,14 +17,12 @@ Azərbaycan dilində 500 MB təmiz mətn (`.txt`) — LLM / NLLB üçün.
 | 7 | [07_merhele_a](hucreler/07_merhele_a.md) | MÜTLƏQ | 8–15 dəq |
 | 8 | [08_merhele_b](hucreler/08_merhele_b.md) | MÜTLƏQ | 5–10 dəq |
 
-## 2 mərhələli arxitektura
+## Arxitektura
 ```
-MƏRHƏLƏ A (datatrove, 4 nüvə)  →  pool/*.jsonl.gz   (8-15 dəq)
-MƏRHƏLƏ B (tək proses)         →  az_data/*.txt    (5-10 dəq)
+MƏRHƏLƏ A (datatrove, 4 nüvə)  →  pool/*.jsonl.gz   8-15 dəq
+MƏRHƏLƏ B (tək proses)         →  az_data/*.txt    5-10 dəq
 ```
-Səbəb: qlobal söz limiti (3000) paralel proseslərdə paylaşıla bilmir → ağır iş paralel, sayım tək prosesdə.
-
-**Ümumi vaxt: ~20-25 dəqiqə** (tək hüceyrə versiyası 1-2.5 saat idi).
+Qlobal söz limiti (3000) paralel proseslərdə paylaşıla bilmir → ağır iş paralel, sayım tək prosesdə.
 
 ## Ölçülmüş sürət
 | Üsul | Sürət |
@@ -30,22 +30,6 @@ Səbəb: qlobal söz limiti (3000) paralel proseslərdə paylaşıla bilmir → 
 | Köhnə (sətir-sətir Python) | ~600 sənəd/san |
 | datatrove 1 nüvə | 2 243 sənəd/san |
 | datatrove 4 nüvə (Kaggle) | ~4 000–9 000 sənəd/san |
-
-## Mənbələr — hamısı açıq (gated olmayan)
-| Kateqoriya | Mənbə |
-|---|---|
-| Veb + Xəbər | `fineweb-2` (azj_Latn), `community_oscar_azerbaijani`, `news_azerbaijan_2`, `news_azerbaijan` |
-| Söhbət + Altyazı | `smoltalk_az`, `opus-100` (az-en) |
-| Ensiklopedik | `wikimedia/wikipedia`, `azerbaijani-pretrain-corpus` |
-| Rəsmi / Hüquqi | `azerbaijan_legislation` |
-| Bədii | `books_dataset` (ID üzrə birləşdirilir, Mərhələ B-də) |
-| token varsa | +`CulturaX`, `OpenSubtitles2024`, `eqanun`, `aze-books` |
-
-## Filtr
-- Dəqiq dublikat (hash), dil yoxlaması, keyfiyyət (Gopher/FineWeb üslubu)
-- Uzunluq 200–20000 simvol, **70% qısa / 30% uzun**
-- **Məzmun sözü max 3000** — şəkilçi/köməkçi sözlər azaddır, limit keçsə bütün mətn atılır
-- Qeyd: 500 limiti ilə 500 MB **mümkün deyil** (500 MB ≈ 80M söz → 160k fərqli söz forması lazım)
 
 ## Nəticə
 ```
@@ -56,3 +40,14 @@ Səbəb: qlobal söz limiti (3000) paralel proseslərdə paylaşıla bilmir → 
 05_fiction.txt                 50 MB
 az_all.txt               TAM 500 MB   (524 288 000 bayt)
 ```
+
+## Filtr
+- Dəqiq dublikat, dil yoxlaması, keyfiyyət (Gopher/FineWeb)
+- Uzunluq 200–20000 simvol, 70% qısa / 30% uzun
+- Məzmun sözü max **3000** (şəkilçilər azad; 500 ilə 500 MB mümkün deyil)
+
+## Mənbələr (hamısı açıq)
+`fineweb-2` · `community_oscar_azerbaijani` · `news_azerbaijan_2` · `news_azerbaijan` ·
+`smoltalk_az` · `opus-100` · `wikipedia` · `azerbaijani-pretrain-corpus` · `azerbaijan_legislation` · `books_dataset`
+
+Token varsa əlavə: `CulturaX` · `OpenSubtitles2024` · `eqanun` · `aze-books`

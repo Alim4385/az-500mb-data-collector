@@ -10,7 +10,7 @@ Köhnə versiyada OSCAR, cc100, azcorpus, OpenSubtitles işləmirdi (gated + skr
 
 | # | Hüceyrə | Vəziyyət |
 |---|---|---|
-| 1 | Quraşdırma + parametrlər | dəyişməyib |
+| 1 | Quraşdırma + parametrlər | **DÜZƏLDİLDİ** (pip sətri silindi) |
 | 1B | HF token | **YENİ** |
 | 2 | Şəkilçi sözlər | dəyişməyib |
 | 3 | Filtr funksiyaları | dəyişməyib |
@@ -20,20 +20,33 @@ Köhnə versiyada OSCAR, cc100, azcorpus, OpenSubtitles işləmirdi (gated + skr
 
 ---
 
-## Hüceyrə 1 — Quraşdırma + parametrlər
+## Hüceyrə 1 — Quraşdırma + parametrlər (DÜZƏLDİLDİ)
 
-`datasets` və `huggingface_hub` yüklənir, çıxış qovluğu və 5 kateqoriyanın MB hədəfləri təyin olunur.
-
-**Dəyişməyib** — artıq işə salmısansa, keç.
+**Vacib:** `!pip install -U datasets` sətri **silahdan çıxarıldı** — Kaggle-da `datasets` artıq qurulub, yeniləmə pip-in asılılıq həllini uzadıb 10+ dəqiqə ilişib qalırdı. İndi yoxlayıb keçir.
 
 ```python
-# !pip install -q -U datasets huggingface_hub
-
 import os
 import re
+import sys
 import hashlib
 import unicodedata
 from collections import Counter
+
+# ------------------------------------------------------------
+# DIQQET: "!pip install -U datasets" LAZIM DEYIL!
+# Kaggle-da datasets artiq qurulub. Yenileme pip-in asililiq
+# hellini uzadir ve 10+ deqiqe cekir. Ona gore yoxlayib kecirik.
+# ------------------------------------------------------------
+import datasets
+print("datasets:", datasets.__version__)
+
+try:
+    import huggingface_hub
+except ImportError:
+    import subprocess
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "huggingface_hub"], check=False)
+    import huggingface_hub
+print("huggingface_hub:", huggingface_hub.__version__)
 
 OUT_DIR = "/kaggle/working/az_data"
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -55,6 +68,7 @@ MAX_WORD_COUNT = 500
 print(f"Cixis qovlugu: {OUT_DIR}")
 print(f"Hedefler: {TARGETS_MB}")
 print(f"Soz limiti: max {MAX_WORD_COUNT} defe")
+print("HUCeyre 1 HAZIRDIR - novbeti hucreye kec")
 ```
 
 ## Hüceyrə 1B — HF token (YENİ)

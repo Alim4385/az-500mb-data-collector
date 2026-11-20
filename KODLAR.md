@@ -1,46 +1,67 @@
-# AZ 500 MB Data Collector — KODLAR
+# 🇦🇿 AZ 500 MB Data Collector — SIFIRDAN
 
-**8 hüceyrə, 1 → 8 sıra ilə.**
-
-> Kaggle Settings: **Internet = ON**, Accelerator = **GPU T4** (GPU istifadə olunmur, sadəcə 13 GB RAM üçün)
+Azərbaycan dilində **500 MB** təmiz mətn (`.txt`) yığmaq üçün tam bələdçi.
 
 ---
 
-## Sıra cədvəli
+## 1️⃣ Başlamazdan əvvəl (Kaggle)
 
-| # | Hüceyrə | Vacib? | Vaxt |
-|---|---|---|---|
-| **1** | Quraşdırma və parametrlər | MÜTLƏQ | 2–5 san |
-| **2** | HF token (istəyə bağlı) | İSTƏYƏ BAĞLI | 2 san |
-| **3** | Şəkilçi və köməkçi sözlər | MÜTLƏQ | dərhal |
-| **4** | Filtr funksiyaları | MÜTLƏQ | dərhal |
-| **5** | Mənbələr | MÜTLƏQ | dərhal |
-| **6** | Mənbə yoxlaması | MÜTLƏQ | 30–60 san |
-| **7** | MƏRHƏLƏ A — paralel yığım (datatrove) | MÜTLƏQ | 8–15 dəq |
-| **8** | MƏRHƏLƏ B — söz limiti + 500 MB | MÜTLƏQ | 5–10 dəq |
+1. https://kaggle.com → **Create → New Notebook**
+
+2. Sağ panel → **Settings**:
+
+   - **Internet: ON** ← ən vacib
+
+   - **Accelerator: GPU T4 ×2** (GPU işlədilmir, sadəcə 13 GB RAM üçün)
+
+3. Bütün mövcud hüceyrələri sil
+
+4. Aşağıdakı **8 hüceyrəni** sıra ilə yarat: hər biri üçün **+ Code** bas, kodu yapışdır, **Shift+Enter**
+
 
 ---
 
-## Nə üçün 2 mərhələ?
+## 2️⃣ Sıra cədvəli
 
-Datatrove 4 nüvədə paralel işləyir → **4× sürət**. Amma qlobal söz limiti (3000) paralel proseslərdə paylaşıla bilmir.
+| # | Hüceyrə | Vacib? | Vaxt | Görməli olduğun sətir |
+|---|---|---|---|---|
+| **1** | Quraşdırma və parametrlər | MÜTLƏQ | 2–5 san | `HUCEYRE 1 HAZIRDIR` |
+| **2** | HF token (istəyə bağlı) | İSTƏYƏ BAĞLI | 2 san | `HF token` |
+| **3** | Şəkilçi və köməkçi sözlər | MÜTLƏQ | dərhal | `Azad soz sayi: 172` |
+| **4** | Filtr funksiyaları | MÜTLƏQ | dərhal | `Filtr funksiyalari hazirdir` |
+| **5** | Mənbələr | MÜTLƏQ | dərhal | `Menbe sayi: 14` |
+| **6** | Mənbə yoxlaması | MÜTLƏQ | 30–60 san | `ISLEYEN:` |
+| **7** | MƏRHƏLƏ A — paralel yığım | MÜTLƏQ | 8–15 dəq | `MƏRHƏLƏ A bitdi` |
+| **8** | MƏRHƏLƏ B — söz limiti + 500 MB | MÜTLƏQ | 5–10 dəq | `Faktiki: 500.00 MB` |
 
-Ona görə: **A** = ağır iş paralel (oxuma + filtr), **B** = yüngül iş tək prosesdə (sayım + balans).
+> Hər hüceyrədən sonra **gözlənilən sətri yoxla**. Görmürsənsə növbəti hüceyrəyə keçmə.
+
+
+---
+
+## 3️⃣ Arxitektura (niyə 2 mərhələ?)
 
 ```
-MƏRHƏLƏ A: 4 nüvə  →  pool/*.jsonl.gz   (8-15 dəq)
-MƏRHƏLƏ B: 1 nüvə   →  az_data/*.txt    (5-10 dəq)
+MƏRHƏLƏ A: 4 nüvə paralel → pool/*.jsonl.gz  (8-15 dəq)
+MƏRHƏLƏ B: 1 proses      → az_data/*.txt   (5-10 dəq)
 ```
 
-**Ümumi: ~20-25 dəqiqə** (əvvəlki tək hüceyrə versiyası 1-2.5 saat idi)
+Qlobal söz limiti (3000) paralel proseslər arasında paylaşıla bilmir. Ona görə ağır iş (oxuma + filtr) paralel, sayım tək prosesdə gedir.
+
+**Ümumi vaxt: ~20–25 dəqiqə**
+
 
 ---
 
-## Hüceyrə 1 — Quraşdırma və parametrlər
+## 4️⃣ Hüceyrələr
+
+### Hüceyrə 1 — Quraşdırma və parametrlər
 
 **MÜTLƏQ** · Vaxt: 2–5 san
 
-Kitabxanaları yoxlayır, çıxış qovluğunu və MB hədəflərini təyin edir.
+Kitabxanaları yoxlayır, qovluqları və hədəfləri təyin edir.
+
+**Görməlisən:** `HUCEYRE 1 HAZIRDIR - novbeti hucreye kec`
 
 ```python
 import os
@@ -81,19 +102,22 @@ SHORT_MIN, SHORT_MAX = 200, 1000
 LONG_MIN, LONG_MAX = 1000, 20000
 SHORT_RATIO = 0.70
 LONG_RATIO = 0.30
-MAX_WORD_COUNT = 500
+MAX_WORD_COUNT = 3000   # 500 ile 500 MB mumkun deyil (README-ye bax)
 
 print(f"Cixis qovlugu: {OUT_DIR}")
 print(f"Hedefler: {TARGETS_MB}")
 print(f"Soz limiti: max {MAX_WORD_COUNT} defe")
+print("Qeyd: 500 limiti ile 500 MB yigmaq mumkun deyil - ona gore 3000")
 print("HUCeyre 1 HAZIRDIR - novbeti hucreye kec")
 ```
 
-## Hüceyrə 2 — HF token (istəyə bağlı)
+### Hüceyrə 2 — HF token (istəyə bağlı)
 
 **İSTƏYƏ BAĞLI** · Vaxt: 2 san
 
-Gated datasetlər üçün. Token olmasa da işləyir — 4 mənbə atlanır.
+Gated datasetlər üçün. Token olmasa da hər şey işləyir.
+
+**Görməlisən:** `[!] HF token yoxdur...` — bu **xəta deyil**, normaldır
 
 ```python
 # ------------------------------------------------------------
@@ -120,11 +144,13 @@ else:
     print("    Kaggle -> Add-ons -> Secrets -> New secret, ad: HF_TOKEN")
 ```
 
-## Hüceyrə 3 — Şəkilçi və köməkçi sözlər
+### Hüceyrə 3 — Şəkilçi və köməkçi sözlər
 
 **MÜTLƏQ** · Vaxt: dərhal
 
-Bu sözlər limitdən azaddır.
+Bu sözlər 500/3000 limitindən azaddır.
+
+**Görməlisən:** `Azad soz sayi: 172`
 
 ```python
 EXEMPT_WORDS = {
@@ -156,14 +182,15 @@ EXEMPT_MIN_LEN = 3
 print(f"Azad soz sayi: {len(EXEMPT_WORDS)}")
 ```
 
-## Hüceyrə 4 — Filtr funksiyaları
+### Hüceyrə 4 — Filtr funksiyaları
 
 **MÜTLƏQ** · Vaxt: dərhal
 
-Təmizləmə, dil, keyfiyyət, dublikat funksiyaları.
+Təmizləmə, dil yoxlaması, keyfiyyət, dublikat funksiyaları.
+
+**Görməlisən:** `Filtr funksiyalari hazirdir`
 
 ```python
-AZ_CHARS = set("eqciOSU EQCIOSU".replace(" ", ""))  # placeholder, real check below
 AZ_CHARS = set(["\u0259", "\u011f", "\u00e7", "\u0131", "\u00f6", "\u015f", "\u00fc",
                 "\u018f", "\u011e", "\u00c7", "\u0130", "\u00d6", "\u015e", "\u00dc"])
 AZ_STOPWORDS = {
@@ -270,11 +297,13 @@ def is_long(text):
 print("Filtr funksiyalari hazirdir")
 ```
 
-## Hüceyrə 5 — Mənbələr
+### Hüceyrə 5 — Mənbələr
 
 **MÜTLƏQ** · Vaxt: dərhal
 
 Hansı datasetdən nə götürülür.
+
+**Görməlisən:** `Menbe sayi: 14`
 
 ```python
 # ------------------------------------------------------------
@@ -333,11 +362,13 @@ for cat, srcs in SOURCES.items():
     print(f"  {cat}: {len(srcs)} menbe")
 ```
 
-## Hüceyrə 6 — Mənbə yoxlaması
+### Hüceyrə 6 — Mənbə yoxlaması
 
 **MÜTLƏQ** · Vaxt: 30–60 san
 
-Hansı mənbə işləyir — uzun işə başlamazdan əvvəl.
+Hər mənbədən 1 nümunə oxuyur. Uzun işə başlamazdan **əvvəl** mütləq.
+
+**Görməlisən:** `ISLEYEN: 10 | ISLEMEYEN: 4` (4-ü token istəyir, normaldır)
 
 ```python
 # ------------------------------------------------------------
@@ -380,11 +411,13 @@ print("\nQeyd: 'gated' xetasi = HF token lazimdir (yuxaridaki kimi).")
 print("Diger xetalar olsa, hemin menbe sadece atlanacaq, qalanlar isleyecek.")
 ```
 
-## Hüceyrə 7 — MƏRHƏLƏ A — paralel yığım (datatrove)
+### Hüceyrə 7 — MƏRHƏLƏ A — paralel yığım
 
 **MÜTLƏQ** · Vaxt: 8–15 dəq
 
-**4 CPU nüvə ilə paralel.** Parquet oxuyur, filtrləyir, namizədləri `/kaggle/working/pool/` qovluğuna yazır.
+**4 CPU nüvə paralel** (datatrove). Parquet oxuyur, filtrləyir, namizədləri `pool/` qovluğuna yazır.
+
+**Görməlisən:** `MƏRHƏLƏ A bitdi: X deqiqe` + hovuz cədvəli
 
 ```python
 # ------------------------------------------------------------
@@ -491,7 +524,8 @@ ADAPTERS = {"smoltalk": adapter_smoltalk, "opus": adapter_opus}
 print("MƏRHƏLƏ A baslayir...")
 print(f"Novbe sayi: {WORKERS}, tapsiriq: {TASKS}, her menbeden max {PER_SOURCE_LIMIT} sened\n")
 
-t_all = time.time() if "time" in dir() else None
+import importlib
+importlib.invalidate_caches()
 import time as _time
 T0 = _time.time()
 
@@ -542,11 +576,13 @@ for cat in list(PHASE_A.keys()) + ["05_fiction"]:
 print("\nNovbeti hucreye kec: MERHELE B")
 ```
 
-## Hüceyrə 8 — MƏRHƏLƏ B — söz limiti + 500 MB
+### Hüceyrə 8 — MƏRHƏLƏ B — söz limiti + 500 MB
 
 **MÜTLƏQ** · Vaxt: 5–10 dəq
 
-Hovuzdan oxuyur, **global 3000 söz limitini** tətbiq edir, 70/30 balans qurur, **tam 500 MB** `az_all.txt` yazır.
+Hovuzdan oxuyur, qlobal 3000 limitini tətbiq edir, 70/30 balans qurur, **tam 500 MB** yazır.
+
+**Görməlisən:** `Hedef: 500.00 MB | Faktiki: 500.00 MB`
 
 ```python
 # ------------------------------------------------------------
@@ -825,9 +861,9 @@ print("\nHazirdir! Kaggle -> Save Version -> Output Dataset")
 
 ---
 
-## Bitdi! Nəticə
+## 5️⃣ Nəticə
 
-`/kaggle/working/az_data/`:
+`/kaggle/working/az_data/` qovluğunda:
 
 ```
 01_web_news.txt               175 MB
@@ -835,14 +871,36 @@ print("\nHazirdir! Kaggle -> Save Version -> Output Dataset")
 03_encyclopedic_technical.txt 100 MB
 04_official_legal.txt          50 MB
 05_fiction.txt                 50 MB
-az_all.txt               TAM 500 MB
+az_all.txt               TAM 500 MB   ← hamısı bir yerdə
 ```
 
-Hüceyrə 8 sonda çap edir:
+Sonra: **Save Version** (sağ üst) → **Output Dataset** kimi saxla.
 
-```
-Hedef: 500.00 MB | Faktiki: 500.00 MB
-Bayt: 524288000 / 524288000
-```
 
-Sonra **Save Version** → Output Dataset.
+---
+
+## 6️⃣ Problemlər və həlləri
+
+| Problem | Səbəb | Həll |
+|---|---|---|
+| `[!] HF token yoxdur` | token qurulmayıb | **Xəta deyil.** Belə davam et |
+| `ISLEYEN: 10 \| ISLEMEYEN: 4` | 4 mənbə gated | **Normaldır.** Qalanlar kifayətdir |
+| Hüceyrə 1 uzun çəkir | `pip install` ilişib | Internet **ON** olduğunu yoxla |
+| `ModuleNotFoundError: datatrove` | quraşdırılmayıb | Hüceyrə 7 özü quraşdırır, gözlə |
+| `PicklingError` / `Can't pickle` | kernel restart edilib | Hüceyrə 1–6-nı yenidən işə sal, sonra 7 |
+| Kateqoriya dolmur | 3000 limiti sərtdir | Normaldır — Mərhələ B çatışmayanı doldurur |
+| `az_all.txt` 500-dən az | data çatmır | Logda FAZA 2-yə bax, hansı kateqoriya çatmır |
+
+---
+
+## 7️⃣ Vacib qeydlər
+
+- **Kernel-i restart etmə** hüceyrə 6-dan sonra — hüceyrə 7 fork ilə işləyir və yaddaşdakı funksiyalara ehtiyacı var
+
+- **Hüceyrə 7-ni yarımçıq dayandırma** — pool faylları yarımçıq qalar (yenidən işə salsan davam edir)
+
+- `pool/` qovluğu ~2-3 GB yer tutur — normaldır
+
+- Mərhələ B-ni **bir neçə dəfə** işə salmaq olar, hər dəfə faylları sıfırdan yazır
+
+- 500 söz limiti ilə 500 MB **riyazi olaraq mümkün deyil** → 3000 istifadə olunur

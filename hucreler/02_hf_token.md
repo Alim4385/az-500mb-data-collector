@@ -2,7 +2,9 @@
 
 **İSTƏYƏ BAĞLI** · Vaxt: 2 san
 
-Gated datasetlər üçün. Token olmasa da işləyir — 4 mənbə atlanır.
+Gated datasetlər üçün. Token olmasa da hər şey işləyir.
+
+**Görməlisən:** `[!] HF token yoxdur...` — bu **xəta deyil**, normaldır
 
 ```python
 # ------------------------------------------------------------

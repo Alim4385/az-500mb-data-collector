@@ -15,13 +15,14 @@ Azərbaycan dilində **500 MB** təmiz mətn (`.txt`) — LLM / NLLB üçün.
 | 5 | [05_menbeler](hucreler/05_menbeler.md) | MÜTLƏQ | dərhal |
 | 6 | [06_yoxlama](hucreler/06_yoxlama.md) | MÜTLƏQ | 30–60 san |
 | 7 | [07_merhele_a](hucreler/07_merhele_a.md) | MÜTLƏQ | 8–15 dəq |
-| 8 | [08_merhele_b](hucreler/08_merhele_b.md) | MÜTLƏQ | 5–10 dəq |
+| 8 | [08_merhele_b](hucreler/08_merhele_b.md) | MÜTLƏQ | 5–15 dəq |
 
 ## Arxitektura
 ```
-MƏRHƏLƏ A (datatrove, 4 nüvə)  →  pool/*.jsonl.gz   8-15 dəq
-MƏRHƏLƏ B (tək proses)         →  az_data/*.txt    5-10 dəq
+MƏRHƏLƏ A (datatrove, 4 nüvə)  →  /tmp/pool/*.jsonl   8-15 dəq   (düz jsonl, gz yox)
+MƏRHƏLƏ B (tək proses)         →  az_data/*.txt      5-15 dəq   (düz txt, gz yox)
 ```
+Data çatmırsa Mərhələ B hovuzu **avtomatik genişləndirir** (Mərhələ A-nı yenidən çağırır) → sonda **tam 500 MB**.
 Qlobal söz limiti (3000) paralel proseslərdə paylaşıla bilmir → ağır iş paralel, sayım tək prosesdə.
 
 ## Ölçülmüş sürət
@@ -39,6 +40,10 @@ Qlobal söz limiti (3000) paralel proseslərdə paylaşıla bilmir → ağır i�
 04_official_legal.txt          50 MB
 05_fiction.txt                 50 MB
 az_all.txt               TAM 500 MB   (524 288 000 bayt)
+```
+
+Hamısı **düz .txt**, gz yoxdur.
+```
 ```
 
 ## Filtr

@@ -9,7 +9,7 @@ Hüceyrə-hüceyrə kod. Kaggle-da notebook aç, hər hüceyrəni sıra ilə kop
 
 Ayrı fayllar da var — [`hucreler/`](hucreler/) qovluğu:
 
-1. [01_quraşdırma](hucreler/01_qura%C5%9Fd%C4%B1rma.md)
+1. [01_quraşdırma](hucreler/01_qurasdirma.md)
 2. [02_parametrler](hucreler/02_parametrler.md)
 3. [03_sekilciler](hucreler/03_sekilciler.md)
 4. [04_filtrler](hucreler/04_filtrler.md)

@@ -1,12 +1,8 @@
 # Hüceyrə 2 — HF token (istəyə bağlı)
 
-**İSTƏYƏ BAĞLI**
+**İSTƏYƏ BAĞLI** · Vaxt: 2 san
 
-Gated datasetlər üçün. **Token olmasa da hər şey işləyir** — sadəcə 4 mənbə atlanır.
-
-Token qurmaq istəmirsənsə, bu hüceyrəni **işə salmadan keç** — xəta vermir.
-
-Token: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → New token (Read) → Kaggle **Add-ons → Secrets** → ad: `HF_TOKEN` → **Restart Kernel**.
+Gated datasetlər üçün. Token olmasa da işləyir — 4 mənbə atlanır.
 
 ```python
 # ------------------------------------------------------------

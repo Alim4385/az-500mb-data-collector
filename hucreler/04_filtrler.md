@@ -2,7 +2,7 @@
 
 **MÜTLƏQ** · Vaxt: dərhal
 
-Təmizləmə, dil yoxlaması, keyfiyyət, dublikat funksiyaları.
+Təmizləmə, dil, keyfiyyət, dublikat funksiyaları.
 
 **Görməlisən:** `Filtr funksiyalari hazirdir`
 

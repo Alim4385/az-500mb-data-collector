@@ -2,7 +2,9 @@
 
 **MÜTLƏQ** · Vaxt: 5–10 dəq
 
-Hovuzdan oxuyur, **global 3000 söz limitini** tətbiq edir, 70/30 balans qurur, **tam 500 MB** `az_all.txt` yazır.
+Hovuzdan oxuyur, qlobal 3000 limitini tətbiq edir, 70/30 balans qurur, **tam 500 MB** yazır.
+
+**Görməlisən:** `Hedef: 500.00 MB | Faktiki: 500.00 MB`
 
 ```python
 # ------------------------------------------------------------

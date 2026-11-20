@@ -1,10 +1,8 @@
 # Hüceyrə 1 — Quraşdırma və parametrlər
 
-**MÜTLƏQ**
+**MÜTLƏQ** · Vaxt: 2–5 san
 
-Kitabxanaları yoxlayır (quraşdırmır — onsuz da var), çıxış qovluğunu və 5 kateqoriyanın MB hədəflərini təyin edir.
-
-**Vaxt:** 2–5 saniyə. Sonda `HUCEYRE 1 HAZIRDIR` yazısını görməlisən.
+Kitabxanaları yoxlayır, çıxış qovluğunu və MB hədəflərini təyin edir.
 
 ```python
 import os

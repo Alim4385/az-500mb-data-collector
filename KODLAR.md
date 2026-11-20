@@ -1,28 +1,41 @@
-# AZ 500 MB Data Collector — KODLAR (hüceyrə-hüceyrə)
+# AZ 500 MB Data Collector — KODLAR
 
-Kaggle-da hüceyrələri **sıra ilə** kopyala-yapışdır və işə sal.
+Bu faylda **7 hüceyrə** var. Yuxarıdan aşağı, **1 → 7** sıra ilə get.
 
-> Settings: **Internet = ON**, Accelerator = **GPU T4**
-
-## Nə dəyişdi?
-
-Köhnə versiyada OSCAR, cc100, azcorpus, OpenSubtitles işləmirdi (gated + skript qadağası). Hamısı **açıq datasetlərlə** əvəz olundu.
-
-| # | Hüceyrə | Vəziyyət |
-|---|---|---|
-| 1 | Quraşdırma + parametrlər | **DÜZƏLDİLDİ** (pip sətri silindi) |
-| 1B | HF token | **YENİ** |
-| 2 | Şəkilçi sözlər | dəyişməyib |
-| 3 | Filtr funksiyaları | dəyişməyib |
-| 4 | Mənbələr | **YENİLƏNDİ** |
-| 4B | Mənbə yoxlaması | **YENİ** |
-| 5 | Yığım | **YENİLƏNDİ** |
+> Kaggle Settings: **Internet = ON**, Accelerator = **GPU T4**
 
 ---
 
-## Hüceyrə 1 — Quraşdırma + parametrlər (DÜZƏLDİLDİ)
+## Sıra cədvəli
 
-**Vacib:** `!pip install -U datasets` sətri **silahdan çıxarıldı** — Kaggle-da `datasets` artıq qurulub, yeniləmə pip-in asılılıq həllini uzadıb 10+ dəqiqə ilişib qalırdı. İndi yoxlayıb keçir.
+| # | Hüceyrə | Vacib? | Vaxt | Nə edir |
+|---|---|---|---|---|
+| **1** | Quraşdırma və parametrlər | MÜTLƏQ | 2–5 san | import + parametrlər |
+| **2** | HF token (istəyə bağlı) | İSTƏYƏ BAĞLI | 2 san | gated dataset açarı |
+| **3** | Şəkilçi və köməkçi sözlər | MÜTLƏQ | dərhal | azad sözlər siyahısı |
+| **4** | Filtr funksiyaları | MÜTLƏQ | dərhal | filtr alətləri |
+| **5** | Mənbələr | MÜTLƏQ | dərhal | dataset siyahısı |
+| **6** | Mənbə yoxlaması | MÜTLƏQ | 30–60 san | hansı mənbə işləyir |
+| **7** | Yığım — əsas iş | MÜTLƏQ | 1–3 saat | 500 MB yığım |
+
+---
+
+## Necə işləmək lazım
+
+1. Hüceyrəni aç → sağ üstdəki **copy** düyməsinə bas
+2. Kaggle-da yeni hüceyrə aç, yapışdır
+3. **Shift + Enter** ilə işə sal
+4. Aşağıdakı **"görməlisən"** sətrini görəndən sonra növbəti hüceyrəyə keç
+
+---
+
+## Hüceyrə 1 — Quraşdırma və parametrlər
+
+**MÜTLƏQ**
+
+Kitabxanaları yoxlayır (quraşdırmır — onsuz da var), çıxış qovluğunu və 5 kateqoriyanın MB hədəflərini təyin edir.
+
+**Vaxt:** 2–5 saniyə. Sonda `HUCEYRE 1 HAZIRDIR` yazısını görməlisən.
 
 ```python
 import os
@@ -71,11 +84,15 @@ print(f"Soz limiti: max {MAX_WORD_COUNT} defe")
 print("HUCeyre 1 HAZIRDIR - novbeti hucreye kec")
 ```
 
-## Hüceyrə 1B — HF token (YENİ)
+## Hüceyrə 2 — HF token (istəyə bağlı)
 
-**Vacibdir.** Gated datasetlər üçün token. Token olmasa da kod işləyir — sadəcə 4 mənbə atlanır.
+**İSTƏYƏ BAĞLI**
 
-Token: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → New token (Read) → kopyala → Kaggle-da **Add-ons → Secrets → New secret**, ad: `HF_TOKEN`.
+Gated datasetlər üçün. **Token olmasa da hər şey işləyir** — sadəcə 4 mənbə atlanır.
+
+Token qurmaq istəmirsənsə, bu hüceyrəni **işə salmadan keç** — xəta vermir.
+
+Token: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → New token (Read) → Kaggle **Add-ons → Secrets** → ad: `HF_TOKEN` → **Restart Kernel**.
 
 ```python
 # ------------------------------------------------------------
@@ -102,9 +119,13 @@ else:
     print("    Kaggle -> Add-ons -> Secrets -> New secret, ad: HF_TOKEN")
 ```
 
-## Hüceyrə 2 — Şəkilçi / köməkçi sözlər
+## Hüceyrə 3 — Şəkilçi və köməkçi sözlər
 
-Bu siyahıdakı sözlər 500 limitindən **azaddır**. **Dəyişməyib.**
+**MÜTLƏQ**
+
+Bu siyahıdakı sözlər 500 limitindən **azaddır**. Heç nə hesablamır, sadəcə siyahını yaradır.
+
+**Vaxt:** dərhal. Sonda `Azad soz sayi: 172` yazır.
 
 ```python
 EXEMPT_WORDS = {
@@ -136,9 +157,13 @@ EXEMPT_MIN_LEN = 3
 print(f"Azad soz sayi: {len(EXEMPT_WORDS)}")
 ```
 
-## Hüceyrə 3 — Filtr funksiyaları
+## Hüceyrə 4 — Filtr funksiyaları
 
-Təmizləmə, dil yoxlaması, keyfiyyət, dublikat, qısa/uzun təyini. **Dəyişməyib.**
+**MÜTLƏQ**
+
+Təmizləmə, dil yoxlaması, keyfiyyət filtri (Gopher/FineWeb), dublikat hash, qısa/uzun təyini.
+
+**Vaxt:** dərhal. Sonda `Filtr funksiyalari hazirdir` yazır.
 
 ```python
 AZ_CHARS = set("eqciOSU EQCIOSU".replace(" ", ""))  # placeholder, real check below
@@ -248,17 +273,13 @@ def is_long(text):
 print("Filtr funksiyalari hazirdir")
 ```
 
-## Hüceyrə 4 — Mənbələr (YENİLƏNDİ)
+## Hüceyrə 5 — Mənbələr
 
-**Bütün mənbələr dəyişdi.** OSCAR/cc100 gated + skriptli idi, işləmirdi. İndi hamısı açıq datasetlərdir:
+**MÜTLƏQ**
 
-| Kateqoriya | Mənbə |
-|---|---|
-| Veb+Xəbər | `fineweb-2` (azj_Latn), `community_oscar_azerbaijani`, `news_azerbaijan_2`, `news_azerbaijan` |
-| Söhbət | `smoltalk_az`, `opus-100` (az-en) |
-| Ensiklopedik | `wikimedia/wikipedia` (20231101.az) |
-| Rəsmi | `azerbaijan_legislation` |
-| Bədii | `books_dataset` (ID üzrə birləşdirilir) |
+Hansı datasetdən nə götürüləcəyi. Hamısı **açıq** datasetlərdir (token olmadan da işləyən).
+
+**Vaxt:** dərhal. Sonda `Menbe sayi: 14` və kateqoriya bölgüsünü çap edir.
 
 ```python
 # ------------------------------------------------------------
@@ -317,9 +338,13 @@ for cat, srcs in SOURCES.items():
     print(f"  {cat}: {len(srcs)} menbe")
 ```
 
-## Hüceyrə 4B — Mənbə yoxlaması (YENİ)
+## Hüceyrə 6 — Mənbə yoxlaması
 
-30 saniyəlik yoxlama — hansı mənbənin işlədiyini göstərir. Uzun yığımdan **əvvəl** işə sal.
+**MÜTLƏQ**
+
+**Ən vacib addım.** Hər mənbədən 1 nümunə oxuyur — hansının işlədiyini göstərir.
+
+Uzun yığıma (1–3 saat) başlamazdan **əvvəl mütləq** işə sal. **Vaxt:** 30–60 saniyə.
 
 ```python
 # ------------------------------------------------------------
@@ -362,9 +387,13 @@ print("\nQeyd: 'gated' xetasi = HF token lazimdir (yuxaridaki kimi).")
 print("Diger xetalar olsa, hemin menbe sadece atlanacaq, qalanlar isleyecek.")
 ```
 
-## Hüceyrə 5 — Yığım (ƏSAS İŞ) — YENİLƏNDİ
+## Hüceyrə 7 — Yığım — əsas iş
 
-3 faza: kateqoriyalar → çatışmayanı doldur → tam 500 MB `az_all.txt`. Kitablar ID üzrə birləşdirilib abzaslara bölünür (70% qısa / 30% uzun).
+**MÜTLƏQ**
+
+5 kateqoriyanı yığır, filtrdən keçirir, tam 500 MB `az_all.txt` yazır.
+
+**Vaxt:** 1–3 saat. Logda FAZA 1, FAZA 2, FAZA 3 görəcəksən.
 
 ```python
 # ------------------------------------------------------------
@@ -681,9 +710,9 @@ print("\nHazirdir! Kaggle -> Save Version -> Output Dataset")
 
 ---
 
-## Nəticə
+## Bitdi! Nəticə
 
-`/kaggle/working/az_data/`:
+`/kaggle/working/az_data/` qovluğunda:
 
 ```
 01_web_news.txt               175 MB
@@ -691,12 +720,14 @@ print("\nHazirdir! Kaggle -> Save Version -> Output Dataset")
 03_encyclopedic_technical.txt 100 MB
 04_official_legal.txt          50 MB
 05_fiction.txt                 50 MB
-az_all.txt               TAM 500 MB
+az_all.txt               TAM 500 MB   <-- hamisi bir yerde
 ```
 
-`az_all.txt` dəqiq 524 288 000 bayt. Kod sonda çap edir:
+Hüceyrə 7 sonda bunu çap edir:
 
 ```
 Hedef: 500.00 MB | Faktiki: 500.00 MB
 Bayt: 524288000 / 524288000
 ```
+
+Bu iki sətir üst-üstə düşürsə → **tamamdır**. Sonra **Save Version** → Output Dataset.

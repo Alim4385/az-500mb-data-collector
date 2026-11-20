@@ -1,6 +1,10 @@
 # Hüceyrə 4 — Filtr funksiyaları
 
-Təmizləmə, dil yoxlaması, keyfiyyət filtri (Gopher/FineWeb üslubu), dublikat hash, qısa/uzun təyini. Bu hüceyrə heç nə yığmır, sadəcə alətləri hazırlayır.
+**MÜTLƏQ**
+
+Təmizləmə, dil yoxlaması, keyfiyyət filtri (Gopher/FineWeb), dublikat hash, qısa/uzun təyini.
+
+**Vaxt:** dərhal. Sonda `Filtr funksiyalari hazirdir` yazır.
 
 ```python
 AZ_CHARS = set("eqciOSU EQCIOSU".replace(" ", ""))  # placeholder, real check below

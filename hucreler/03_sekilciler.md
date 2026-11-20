@@ -2,7 +2,7 @@
 
 **MÜTLƏQ** · Vaxt: dərhal
 
-Bu sözlər 500/3000 limitindən azaddır.
+Bu sözlər limitdən azaddır.
 
 **Görməlisən:** `Azad soz sayi: 172`
 

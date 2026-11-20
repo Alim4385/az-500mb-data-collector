@@ -1,28 +1,53 @@
 # AZ 500MB Data Collector
 
-Azərbaycan dilində 500 MB təmiz mətn (.txt) yığmaq üçün Kaggle notebook-u.
+Azərbaycan dilində 500 MB təmiz mətn (`.txt`) yığmaq üçün kod.
 LLM / NLLB üçün keyfiyyətli, söz əhatəsi geniş data.
 
-## Kateqoriyalar (hər biri 500 MB içində)
-- Veb + Xəbər — 175 MB
-- Söhbət + Altyazı — 125 MB
-- Ensiklopedik + Texniki — 100 MB
-- Rəsmi / Hüquqi — 50 MB
-- Bədii — 50 MB
+## 👉 KODLAR: [KODLAR.md](KODLAR.md)
+
+Hüceyrə-hüceyrə kod. Kaggle-da notebook aç, hər hüceyrəni sıra ilə kopyala-yapışdır, işə sal.
+
+Ayrı fayllar da var — [`hucreler/`](hucreler/) qovluğu:
+
+1. [01_quraşdırma](hucreler/01_qura%C5%9Fd%C4%B1rma.md)
+2. [02_parametrler](hucreler/02_parametrler.md)
+3. [03_sekilciler](hucreler/03_sekilciler.md)
+4. [04_filtrler](hucreler/04_filtrler.md)
+5. [05_menbeler](hucreler/05_menbeler.md)
+6. [06_yigma](hucreler/06_yigma.md)
+
+## Kateqoriyalar (cəmi 500 MB)
+| Fayl | MB |
+|---|---|
+| 01_web_news | 175 |
+| 02_conversation_subtitle | 125 |
+| 03_encyclopedic_technical | 100 |
+| 04_official_legal | 50 |
+| 05_fiction | 50 |
 
 ## Filtr (sərt, LLM standartı)
-- Dəqiq dublikat silmə
-- Uzunluq: 200–20000 simvol
-- Dil + keyfiyyət yoxlaması (Gopher/FineWeb üslubu)
-- Məzmun sözü max 500 dəfə (şəkilçilər azaddır, limit keçsə bütün mətn atılır)
-- 70% qısa / 30% uzun balansı
+- Dəqiq dublikat silmə (hash)
+- Uzunluq: 200–20000 simvol (qısa 200–1000, uzun 1000–20000)
+- Dil yoxlaması (AZ hərfləri + stopword nisbəti)
+- Keyfiyyət: hərf nisbəti, rəqəm, boilerplate, söz təkrarı, punktuasiya
+- **Məzmun sözü max 500 dəfə** — şəkilçi/köməkçi sözlər azaddır, limit keçsə bütün mətn atılır
+- Balans: 70% qısa / 30% uzun
 
-## Kaggle-da işə salmaq
-1. Kaggle → Create New Notebook → Upload → `kaggle_az_collector.ipynb`
-2. Settings: Internet = ON, GPU T4
-3. Run All
-4. Çıxış: `/kaggle/working/az_data/` qovluğunda `.txt` fayllar
+## Kaggle
+- Settings: **Internet = ON**, Accelerator = **GPU T4**
+- Çıxış: `/kaggle/working/az_data/`
+- Bitəndə **Save Version** → Output Dataset
 
 ## Mənbələr
-- OSCAR-2301 AZ, CC100 AZ, Wikipedia AZ, OpenSubtitles2024 AZ,
-  allmalab/eqanun, allmalab/aze-books, azcorpus
+| Kateqoriya | Dataset |
+|---|---|
+| Veb + Xəbər | `oscar-corpus/OSCAR-2301` (az), `statmt/cc100` (az), `azcorpus/azcorpus_v0` (az_news) |
+| Söhbət + Altyazı | `Helsinki-NLP/OpenSubtitles2024` (az) |
+| Ensiklopedik | `wikimedia/wikipedia` (20231101.az), `azcorpus/azcorpus_v0` (az_wiki) |
+| Rəsmi / Hüquqi | `allmalab/eqanun` |
+| Bədii | `allmalab/aze-books`, `azcorpus/azcorpus_v0` (az_books) |
+
+## Fayllar
+- `KODLAR.md` — bütün hüceyrələr bir yerdə
+- `hucreler/` — hər hüceyrə ayrı fayl
+- `kaggle_az_collector.py` — eyni kod tək `.py` fayl kimi (istəsən birbaşa yükləyib işə sal)

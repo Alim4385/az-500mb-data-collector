@@ -4,6 +4,8 @@
 
 Hansı datasetdən nə götürülür.
 
+**Görməlisən:** `Menbe sayi: 14`
+
 ```python
 # ------------------------------------------------------------
 # MENBELER - hamisi ACIQ (gated olmayan) datasetler

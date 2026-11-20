@@ -2,10 +2,11 @@
 
 **MÜTLƏQ** · Vaxt: dərhal
 
-Təmizləmə, dil, keyfiyyət, dublikat funksiyaları.
+Təmizləmə, dil yoxlaması, keyfiyyət, dublikat funksiyaları.
+
+**Görməlisən:** `Filtr funksiyalari hazirdir`
 
 ```python
-AZ_CHARS = set("eqciOSU EQCIOSU".replace(" ", ""))  # placeholder, real check below
 AZ_CHARS = set(["\u0259", "\u011f", "\u00e7", "\u0131", "\u00f6", "\u015f", "\u00fc",
                 "\u018f", "\u011e", "\u00c7", "\u0130", "\u00d6", "\u015e", "\u00dc"])
 AZ_STOPWORDS = {

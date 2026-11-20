@@ -1,39 +1,34 @@
 # AZ 500 MB Data Collector — KODLAR (hüceyrə-hüceyrə)
 
-Kaggle-da **Create New Notebook** aç, aşağıdakı hüceyrələri **sıra ilə** bir-bir kopyala-yapışdır və işə sal.
-
-Hər hüceyrənin sağ üstündə **copy** düyməsi var (GitHub-da).
+Kaggle-da hüceyrələri **sıra ilə** kopyala-yapışdır və işə sal.
 
 > Settings: **Internet = ON**, Accelerator = **GPU T4**
 
+## Nə dəyişdi?
+
+Köhnə versiyada OSCAR, cc100, azcorpus, OpenSubtitles işləmirdi (gated + skript qadağası). Hamısı **açıq datasetlərlə** əvəz olundu.
+
+| # | Hüceyrə | Vəziyyət |
+|---|---|---|
+| 1 | Quraşdırma + parametrlər | dəyişməyib |
+| 1B | HF token | **YENİ** |
+| 2 | Şəkilçi sözlər | dəyişməyib |
+| 3 | Filtr funksiyaları | dəyişməyib |
+| 4 | Mənbələr | **YENİLƏNDİ** |
+| 4B | Mənbə yoxlaması | **YENİ** |
+| 5 | Yığım | **YENİLƏNDİ** |
+
 ---
 
-## Sıra cədvəli
+## Hüceyrə 1 — Quraşdırma + parametrlər
 
-| # | Hüceyrə | Nə edir | Vaxt |
-|---|---|---|---|
-| 1 | Quraşdırma | `datasets` kitabxanasını yükləyir | ~1 dəq |
-| 2 | Parametrlər | Çıxış qovluğu, 5 kateqoriyanın MB hədəfləri, uzunluq sərhədləri (200–1000 qısa, 1000–20000 uzun), 70/30 balans, söz limiti 500 | dərhal |
-| 3 | Şəkilçi / köməkçi sözlər | Bu siyahıdakı sözlər 500 limitindən **azaddır**, istənilən qədər ola bilər | dərhal |
-| 4 | Filtr funksiyaları | Təmizləmə, dil yoxlaması, keyfiyyət filtri (Gopher/FineWeb üslubu), dublikat hash, qısa/uzun təyini | dərhal |
-| 5 | Mənbələr | Hər kateqoriya üçün hazır, təmiz datasetlər | dərhal |
-| 6 | Yığım (əsas iş) | 5 kateqoriyanı yığır, çatışmayanı doldurur, tam 500 MB yazır | 1–3 saat |
+`datasets` və `huggingface_hub` yüklənir, çıxış qovluğu və 5 kateqoriyanın MB hədəfləri təyin olunur.
 
----
-
-## Hüceyrə 1 — Quraşdırma
-
-`datasets` kitabxanasını yükləyir. Kaggle-da hər şeydən əvvəl bunu işə sal.
+**Dəyişməyib** — artıq işə salmısansa, keç.
 
 ```python
-# !pip install -q datasets
-```
+# !pip install -q -U datasets huggingface_hub
 
-## Hüceyrə 2 — Parametrlər
-
-Çıxış qovluğu, 5 kateqoriyanın MB hədəfləri, uzunluq sərhədləri (200–1000 qısa, 1000–20000 uzun), 70/30 balans, söz limiti 500. Burada rəqəmləri dəyişə bilərsən.
-
-```python
 import os
 import re
 import hashlib
@@ -62,9 +57,40 @@ print(f"Hedefler: {TARGETS_MB}")
 print(f"Soz limiti: max {MAX_WORD_COUNT} defe")
 ```
 
-## Hüceyrə 3 — Şəkilçi / köməkçi sözlər
+## Hüceyrə 1B — HF token (YENİ)
 
-Bu siyahıdakı sözlər 500 limitindən **azaddır**, istənilən qədər ola bilər. Çünki onlar mənanı daşımır, sadəcə qrammatikadır.
+**Vacibdir.** Gated datasetlər üçün token. Token olmasa da kod işləyir — sadəcə 4 mənbə atlanır.
+
+Token: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → New token (Read) → kopyala → Kaggle-da **Add-ons → Secrets → New secret**, ad: `HF_TOKEN`.
+
+```python
+# ------------------------------------------------------------
+# HUCEYRE 1B (YENI): HF TOKEN
+# Gated datasetler ucun lazimdir (CulturaX, OpenSubtitles2024,
+# eqanun, aze-books). Token olmasa da qalan menbeler isleyir.
+# ------------------------------------------------------------
+import os
+HF_TOKEN = None
+try:
+    from kaggle_secrets import UserSecretsClient
+    HF_TOKEN = UserSecretsClient().get_secret("HF_TOKEN")
+except Exception:
+    pass
+if not HF_TOKEN:
+    HF_TOKEN = os.environ.get("HF_TOKEN")
+
+if HF_TOKEN:
+    from huggingface_hub import login
+    login(token=HF_TOKEN, add_to_git_credential=False)
+    print("[OK] HF token qebul edildi - gated datasetler de isleyecek")
+else:
+    print("[!] HF token yoxdur - gated datasetler atlanacaq, qalanlari isleyecek")
+    print("    Kaggle -> Add-ons -> Secrets -> New secret, ad: HF_TOKEN")
+```
+
+## Hüceyrə 2 — Şəkilçi / köməkçi sözlər
+
+Bu siyahıdakı sözlər 500 limitindən **azaddır**. **Dəyişməyib.**
 
 ```python
 EXEMPT_WORDS = {
@@ -96,9 +122,9 @@ EXEMPT_MIN_LEN = 3
 print(f"Azad soz sayi: {len(EXEMPT_WORDS)}")
 ```
 
-## Hüceyrə 4 — Filtr funksiyaları
+## Hüceyrə 3 — Filtr funksiyaları
 
-Təmizləmə, dil yoxlaması, keyfiyyət filtri (Gopher/FineWeb üslubu), dublikat hash, qısa/uzun təyini. Bu hüceyrə heç nə yığmır, sadəcə alətləri hazırlayır.
+Təmizləmə, dil yoxlaması, keyfiyyət, dublikat, qısa/uzun təyini. **Dəyişməyib.**
 
 ```python
 AZ_CHARS = set("eqciOSU EQCIOSU".replace(" ", ""))  # placeholder, real check below
@@ -208,100 +234,140 @@ def is_long(text):
 print("Filtr funksiyalari hazirdir")
 ```
 
-## Hüceyrə 5 — Mənbələr
+## Hüceyrə 4 — Mənbələr (YENİLƏNDİ)
 
-Hər kateqoriya üçün hazır, təmiz datasetlər. Biri olmasa kod avtomatik növbətinə keçir.
+**Bütün mənbələr dəyişdi.** OSCAR/cc100 gated + skriptli idi, işləmirdi. İndi hamısı açıq datasetlərdir:
+
+| Kateqoriya | Mənbə |
+|---|---|
+| Veb+Xəbər | `fineweb-2` (azj_Latn), `community_oscar_azerbaijani`, `news_azerbaijan_2`, `news_azerbaijan` |
+| Söhbət | `smoltalk_az`, `opus-100` (az-en) |
+| Ensiklopedik | `wikimedia/wikipedia` (20231101.az) |
+| Rəsmi | `azerbaijan_legislation` |
+| Bədii | `books_dataset` (ID üzrə birləşdirilir) |
 
 ```python
-# Her kateqoriya ucun bir nece menbe. Kod sirayla yoxlayir,
-# biri olmasa novbetisine kecir. Streaming ile oxuyur (RAM dolmur).
+# ------------------------------------------------------------
+# MENBELER - hamisi ACIQ (gated olmayan) datasetler
+# Sira ile yoxlanir: biri islemese novbetisine kecir.
+# ------------------------------------------------------------
 SOURCES = {
+    # ---- VEB + XEBER ----
     "01_web_news": [
-        {"id": "oscar-corpus/OSCAR-2301", "kwargs": {"language": "az"}, "keys": ["text"]},
-        {"id": "statmt/cc100", "config": "az", "keys": ["text"]},
-        {"id": "azcorpus/azcorpus_v0", "config": "az_news", "keys": ["text"]},
+        {"id": "HuggingFaceFW/fineweb-2", "config": "azj_Latn", "field": "text"},
+        {"id": "LocalDoc/community_oscar_azerbaijani", "field": "content"},
+        {"id": "LocalDoc/news_azerbaijan_2", "field": "text"},
+        {"id": "LocalDoc/news_azerbaijan", "field": "text"},
+        {"id": "uonlp/CulturaX", "config": "az", "field": "text"},          # gated (token varsa)
     ],
+    # ---- SOHBET + ALTYAZI ----
     "02_conversation_subtitle": [
-        {"id": "Helsinki-NLP/OpenSubtitles2024", "config": "az", "keys": ["src", "tgt", "text", "translation"]},
-        {"id": "Helsinki-NLP/OpenSubtitles2024", "config": "az-en", "keys": ["src", "tgt", "text", "translation"]},
-        {"id": "open_subtitles", "config": "az", "keys": ["src", "tgt", "text", "translation"]},
+        {"id": "LocalDoc/smoltalk_az", "field": "messages_az"},
+        {"id": "Helsinki-NLP/opus-100", "config": "az-en", "field": ["translation", "az", "src", "text"]},
+        {"id": "Helsinki-NLP/OpenSubtitles2024", "config": "az-en",
+         "field": ["translation", "az", "text"]},                            # gated (token varsa)
     ],
+    # ---- ENSIKLOPEDIK + TEXNIKI ----
     "03_encyclopedic_technical": [
-        {"id": "wikimedia/wikipedia", "config": "20231101.az", "keys": ["text"]},
-        {"id": "azcorpus/azcorpus_v0", "config": "az_wiki", "keys": ["text"]},
+        {"id": "wikimedia/wikipedia", "config": "20231101.az", "field": "text"},
+        {"id": "LocalDoc/azerbaijani-pretrain-corpus", "field": "text"},
     ],
+    # ---- RESMI / HUQUQI ----
     "04_official_legal": [
-        {"id": "allmalab/eqanun", "keys": ["text", "content", "Text"]},
+        {"id": "LocalDoc/azerbaijan_legislation", "field": "text"},
+        {"id": "allmalab/eqanun", "field": ["text", "content", "article"]},  # gated (token varsa)
     ],
+    # ---- BEDII ----
     "05_fiction": [
-        {"id": "allmalab/aze-books", "keys": ["Text", "text", "content"]},
-        {"id": "azcorpus/azcorpus_v0", "config": "az_books", "keys": ["text"]},
+        # Kitablar setir-setir gelir -> ID uzre birlesdirib abzaslara boluruq
+        {"id": "LocalDoc/books_dataset", "join_by": "ID", "join_field": " Sentence"},
+        {"id": "allmalab/aze-books", "field": ["Text", "text", "content"]},  # gated (token varsa)
     ],
 }
 
-def extract_text(example, keys):
-    # Evvelce axtarilan acarlara bax
-    for k in keys:
-        if k in example and isinstance(example[k], str) and len(example[k].strip()) > 50:
-            return example[k]
-    # Translation obyekti ola biler: {"az": "...", "en": "..."}
-    for k in keys:
-        if k in example and isinstance(example[k], dict):
-            for lang in ("az", "aze", "src", "tgt"):
-                if lang in example[k] and isinstance(example[k][lang], str):
-                    return example[k][lang]
-            # En uzun string deyer
-            vals = [v for v in example[k].values() if isinstance(v, str)]
-            if vals:
-                return max(vals, key=len)
-    # Hech biri olmasa en uzun string deyer
-    strs = [v for v in example.values() if isinstance(v, str) and len(v.strip()) > 50]
-    if strs:
-        return max(strs, key=len)
-    return ""
-
 def try_load(src):
+    """Dataseti streaming rejiminde acir. Alinmasa None qaytarir (kod novbeti menbeye kecir)."""
     from datasets import load_dataset
-    kwargs = dict(src.get("kwargs", {}))
-    kwargs["streaming"] = True
-    kwargs["split"] = "train"
+    kw = {"streaming": True, "split": "train"}
+    name = src["id"] + (f" [{src['config']}]" if src.get("config") else "")
     try:
-        if "config" in src:
-            ds = load_dataset(src["id"], src["config"], **kwargs)
-        else:
-            ds = load_dataset(src["id"], **kwargs)
-        return ds
+        if src.get("config"):
+            return load_dataset(src["id"], src["config"], **kw)
+        return load_dataset(src["id"], **kw)
     except Exception as e:
-        print(f"  [X] Yuklenmedi: {src['id']} {src.get('config','')} -> {type(e).__name__}: {str(e)[:200]}")
+        print(f"  [X] {name}: {type(e).__name__}: {str(e)[:140]}")
         return None
 
-print("Menbeler hazirdir")
+print("Menbe sayi:", sum(len(v) for v in SOURCES.values()))
+for cat, srcs in SOURCES.items():
+    print(f"  {cat}: {len(srcs)} menbe")
 ```
 
-## Hüceyrə 6 — Yığım (əsas iş)
+## Hüceyrə 4B — Mənbə yoxlaması (YENİ)
 
-5 kateqoriyanı yığır və filtrləyir. **Ən vacib hissə:** hər kateqoriya öz MB hədəfinə çatır, əgər hansısa kateqoriya dolmasa (məsələn altyazı azdır), çatışmayan hissəni **avtomatik başqa mənbədən doldurur**. Sonda `az_all.txt` **tam 500 MB** (524 288 000 bayt) olur — sözün ortasında kəsilmir, abzas sərhədində bitir.
+30 saniyəlik yoxlama — hansı mənbənin işlədiyini göstərir. Uzun yığımdan **əvvəl** işə sal.
 
-**Vaxt:** 1–3 saat. Logda "FAZA 1 / FAZA 2 / FAZA 3" görəcəksən.
+```python
+# ------------------------------------------------------------
+# MENBE YOXLAMASI - her menbeden 1 numune oxuyur
+# Ishlemezden evvel bunu ise salin (30 saniye)
+# ------------------------------------------------------------
+from datasets import load_dataset
+
+print("MENBE YOXLAMASI\n" + "=" * 62)
+isleyen, islemeyen = [], []
+
+for cat, srcs in SOURCES.items():
+    print(f"\n--- {cat} ---")
+    for src in srcs:
+        name = src["id"] + (f" [{src['config']}]" if src.get("config") else "")
+        try:
+            kw = {"streaming": True, "split": "train"}
+            if src.get("config"):
+                ds = load_dataset(src["id"], src["config"], **kw)
+            else:
+                ds = load_dataset(src["id"], **kw)
+            ex = next(iter(ds))
+            fields = [k for k in ex.keys()][:8]
+            print(f"  [OK] {name}")
+            print(f"       saheler: {fields}")
+            isleyen.append(name)
+        except Exception as e:
+            msg = str(e).replace("\n", " ")[:120]
+            print(f"  [X ] {name}")
+            print(f"       {type(e).__name__}: {msg}")
+            islemeyen.append(name)
+
+print("\n" + "=" * 62)
+print(f"ISLEYEN: {len(isleyen)} | ISLEMEYEN: {len(islemeyen)}")
+if islemeyen:
+    print("\nIslemeyenler:")
+    for n in islemeyen:
+        print("  -", n)
+print("\nQeyd: 'gated' xetasi = HF token lazimdir (yuxaridaki kimi).")
+print("Diger xetalar olsa, hemin menbe sadece atlanacaq, qalanlar isleyecek.")
+```
+
+## Hüceyrə 5 — Yığım (ƏSAS İŞ) — YENİLƏNDİ
+
+3 faza: kateqoriyalar → çatışmayanı doldur → tam 500 MB `az_all.txt`. Kitablar ID üzrə birləşdirilib abzaslara bölünür (70% qısa / 30% uzun).
 
 ```python
 # ------------------------------------------------------------
 # HUCEYRE 6: Esas dovr - yig, filtrle, yaz
-#   - her kateqoriya oz MB hedefine
-#   - az_all.txt = TAM 500 MB (524 288 000 bayt)
+#   FAZA 1: her kateqoriya oz MB hedefine
+#   FAZA 2: catismayan hisseni basqa menbeden doldur
+#   FAZA 3: az_all.txt = TAM 500 MB
 # ------------------------------------------------------------
-TOTAL_TARGET_BYTES = 500 * 1024 * 1024
+TOTAL_TARGET_BYTES = 500 * 1024 * 1024   # tam 500 MB
 
 seen_hashes = set()
 word_counts = Counter()
 stats = Counter()
 cat_bytes = {c: 0 for c in TARGETS_MB}
-cat_short = {c: 0 for c in TARGETS_MB}
-cat_long = {c: 0 for c in TARGETS_MB}
 cat_docs = {c: 0 for c in TARGETS_MB}
 
 def vocab_ok(tokens):
-    # Limitden kecen soz varmi? (sekilciler azaddir)
     for t in set(tokens):
         if len(t) < EXEMPT_MIN_LEN or t in EXEMPT_WORDS:
             continue
@@ -314,90 +380,164 @@ def vocab_add(tokens):
         if len(t) >= EXEMPT_MIN_LEN and t not in EXEMPT_WORDS:
             word_counts[t] += 1
 
+# ---------- saheden metn cixarma ----------
+def to_text(value):
+    """str / dict / list-of-dicts -> metn"""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        for k in ("az", "aze", "src", "content", "text"):
+            if isinstance(value.get(k), str):
+                return value[k]
+        strs = [v for v in value.values() if isinstance(v, str)]
+        return max(strs, key=len) if strs else ""
+    if isinstance(value, list):
+        parts = []
+        for m in value:
+            if isinstance(m, dict):
+                c = m.get("content") or m.get("text") or m.get("value") or ""
+                role = m.get("role", "")
+                if c:
+                    parts.append(f"{role}: {c}" if role else c)
+            elif isinstance(m, str):
+                parts.append(m)
+        return "\n".join(parts)
+    return ""
+
+def extract_text(ex, field):
+    if field is None:
+        strs = [v for v in ex.values() if isinstance(v, str)]
+        return max(strs, key=len) if strs else ""
+    fields = field if isinstance(field, list) else [field]
+    for f in fields:
+        if f in ex:
+            t = to_text(ex[f])
+            if t and len(t.strip()) > 20:
+                return t
+    return ""
+
+# ---------- kitablari abzaslara bolme ----------
+CHUNK_CYCLE = [950] * 7 + [6000] * 3   # 70% qisa, 30% uzun
+
+def split_pieces(text, sizes=CHUNK_CYCLE):
+    out, pos, i, n = [], 0, 0, len(text)
+    while pos < n:
+        size = sizes[i % len(sizes)]
+        end = min(pos + size, n)
+        if end < n:
+            cut = text.rfind(". ", pos, end)
+            if cut > pos + size // 2:
+                end = cut + 2
+        piece = text[pos:end].strip()
+        if len(piece) >= 80:
+            out.append(piece)
+        pos = end
+        i += 1
+    return out
+
+def iter_join(src):
+    """Setir-setir gelen kitabi ID uzre birlesdirib abzaslara bolur."""
+    ds = try_load(src)
+    if ds is None:
+        return
+    key, fld = src["join_by"], src["join_field"]
+    buf, cur, n_docs = [], None, 0
+    for ex in ds:
+        k = ex.get(key)
+        sent = (ex.get(fld) or "").strip()
+        if cur is None:
+            cur = k
+        if k != cur:
+            for piece in split_pieces(" ".join(buf)):
+                yield piece
+                n_docs += 1
+            buf, cur = [], k
+        if sent:
+            buf.append(sent)
+    if buf:
+        for piece in split_pieces(" ".join(buf)):
+            yield piece
+            n_docs += 1
+    print(f"  [kitab rejimi] {n_docs} abzas hazirlandi")
+
+def iter_docs(src):
+    if src.get("join_by"):
+        yield from iter_join(src)
+        return
+    ds = try_load(src)
+    if ds is None:
+        return
+    for ex in ds:
+        t = extract_text(ex, src.get("field"))
+        if t:
+            yield t
+
+# ---------- bir gediş ----------
 def pass_sources(cat_name, budget_bytes, mode):
-    """Kateqoriyanin menbelerini sirayla oxuyur, budget_bytes qeder yazir.
-    mode='w' - fayli sifirdan yazir, mode='a' - sonuna elave edir.
-    Yazilan bayt sayini qaytarir."""
+    """Kateqoriyanin menbelerini sirayla oxuyur, budget_bytes qeder yazir."""
     if budget_bytes <= 0:
         return 0
     out_path = os.path.join(OUT_DIR, f"{cat_name}.txt")
-    pass_short_target = int(budget_bytes * SHORT_RATIO)
-    pass_long_target = int(budget_bytes * LONG_RATIO)
+    short_target = int(budget_bytes * SHORT_RATIO)
+    long_target = int(budget_bytes * LONG_RATIO)
     p_short = p_long = p_docs = 0
     print(f"\n=== {cat_name}: bu gedişde {budget_bytes/1048576:.1f} MB ===")
-    f = open(out_path, mode, encoding="utf-8")
-    try:
+    with open(out_path, mode, encoding="utf-8") as f:
         for src in SOURCES[cat_name]:
-            if p_short >= pass_short_target and p_long >= pass_long_target:
+            if p_short >= short_target and p_long >= long_target:
                 break
-            print(f" Menbe: {src['id']} {src.get('config','')}")
-            ds = try_load(src)
-            if ds is None:
-                continue
-            try:
-                first = next(iter(ds))
-                print(f"  Numune acarlar: {list(first.keys())}")
-            except Exception as e:
-                print(f"  [X] Numune oxunmadi: {e}")
-                continue
+            name = src["id"] + (f" [{src['config']}]" if src.get("config") else "")
+            print(f" Menbe: {name}")
             n_seen = 0
-            for ex in ds:
-                if p_short >= pass_short_target and p_long >= pass_long_target:
-                    break
-                n_seen += 1
-                raw = extract_text(ex, src["keys"])
-                if not raw:
-                    stats["bos_metn"] += 1
-                    continue
-                text = normalize_text(raw)
-                tokens = tokenize(text)
-                if not is_azerbaijani(text, tokens):
-                    stats["dil_deyil"] += 1
-                    continue
-                ok, reason = quality_ok(text, tokens)
-                if not ok:
-                    stats[reason] += 1
-                    continue
-                h = doc_hash(text)
-                if h in seen_hashes:
-                    stats["dublikat"] += 1
-                    continue
-                if not vocab_ok(tokens):
-                    stats["soz_limiti_500"] += 1
-                    continue
-                b = len((text + "\n\n").encode("utf-8"))
-                if is_short(text):
-                    if p_short >= pass_short_target:
-                        stats["qisa_dolu"] += 1
+            try:
+                for raw in iter_docs(src):
+                    if p_short >= short_target and p_long >= long_target:
+                        break
+                    n_seen += 1
+                    text = normalize_text(raw)
+                    tokens = tokenize(text)
+                    if not is_azerbaijani(text, tokens):
+                        stats["dil_deyil"] += 1
                         continue
-                    p_short += b
-                    cat_short[cat_name] += b
-                elif is_long(text):
-                    if p_long >= pass_long_target:
-                        stats["uzun_dolu"] += 1
+                    ok, reason = quality_ok(text, tokens)
+                    if not ok:
+                        stats[reason] += 1
                         continue
-                    p_long += b
-                    cat_long[cat_name] += b
-                else:
-                    stats["olcu_arasi"] += 1
-                    continue
-                seen_hashes.add(h)
-                vocab_add(tokens)
-                f.write(text + "\n\n")
-                p_docs += 1
-                cat_bytes[cat_name] += b
-                cat_docs[cat_name] += 1
-                if p_docs % 1000 == 0:
-                    print(f"  ... bu gedişde {p_docs} metn, qisa {p_short/1048576:.1f} MB, uzun {p_long/1048576:.1f} MB, gorulen {n_seen}")
-            print(f"  Bitdi: {src['id']} - gorulen {n_seen}")
-    finally:
-        f.close()
+                    h = doc_hash(text)
+                    if h in seen_hashes:
+                        stats["dublikat"] += 1
+                        continue
+                    if not vocab_ok(tokens):
+                        stats["soz_limiti_500"] += 1
+                        continue
+                    b = len((text + "\n\n").encode("utf-8"))
+                    if len(text) < SHORT_MAX:
+                        if p_short >= short_target:
+                            stats["qisa_dolu"] += 1
+                            continue
+                        p_short += b
+                    else:
+                        if p_long >= long_target:
+                            stats["uzun_dolu"] += 1
+                            continue
+                        p_long += b
+                    seen_hashes.add(h)
+                    vocab_add(tokens)
+                    f.write(text + "\n\n")
+                    p_docs += 1
+                    cat_bytes[cat_name] += b
+                    cat_docs[cat_name] += 1
+                    if p_docs % 2000 == 0:
+                        print(f"  ... {p_docs} metn | qisa {p_short/1048576:.1f} MB | uzun {p_long/1048576:.1f} MB | baxilan {n_seen}")
+            except Exception as e:
+                print(f"  [X] {name}: {type(e).__name__}: {str(e)[:120]} - novbeti menbeye kecirik")
+                continue
+            print(f"  Bitdi: {name} - baxilan {n_seen}, qebul {p_docs}")
     written = p_short + p_long
-    print(f"=== {cat_name}: bu gedişde {written/1048576:.1f} MB, {p_docs} metn (cemi {cat_bytes[cat_name]/1048576:.1f} MB) ===")
+    print(f"=== {cat_name}: +{written/1048576:.1f} MB, {p_docs} metn (cemi {cat_bytes[cat_name]/1048576:.1f} MB) ===")
     return written
 
-
-# ---------- FAZA 1: her kateqoriya oz hedefine ----------
+# =========== FAZA 1 ===========
 print("\n########## FAZA 1: KATEQORIYALAR ##########")
 for cat, mb in TARGETS_MB.items():
     pass_sources(cat, mb * 1024 * 1024, "w")
@@ -405,14 +545,16 @@ for cat, mb in TARGETS_MB.items():
 total = sum(cat_bytes.values())
 print(f"\nFaza 1 neticesi: {total/1048576:.1f} MB")
 
+# =========== FAZA 2 ===========
+# Qeyd: 500 soz limiti cok sertdir. Real datada kateqoriyalar dolmaya biler.
+# AUTO_RAISE_LIMIT = True etsen, kod limiti avtomatik artiracaq (1000, 2000, ...)
+AUTO_RAISE_LIMIT = False
+FILL_ORDER = ["01_web_news", "03_encyclopedic_technical", "02_conversation_subtitle",
+              "05_fiction", "04_official_legal"]
 
-# ---------- FAZA 2: catismayan hisseni doldur ----------
 deficit = TOTAL_TARGET_BYTES - total
 if deficit > 1024:
-    print(f"\n########## FAZA 2: {deficit/1048576:.1f} MB catismir, doldurulur ##########")
-    # Ustunluk siyahisi: en genis menbe evvelde
-    FILL_ORDER = ["01_web_news", "03_encyclopedic_technical", "05_fiction",
-                  "02_conversation_subtitle", "04_official_legal"]
+    print(f"\n########## FAZA 2: {deficit/1048576:.1f} MB catismir ##########")
     for rnd in range(3):
         if deficit <= 1024:
             break
@@ -422,24 +564,38 @@ if deficit > 1024:
                 break
             got = pass_sources(cat, deficit, "a")
             deficit -= got
-            if got == 0:
-                print(f"  {cat}: elave hec ne tapilmadi")
             if got > 0:
-                print(f"  {cat}: +{got/1048576:.1f} MB elave edildi, qalan catismayan {deficit/1048576:.1f} MB")
+                print(f"  {cat}: +{got/1048576:.1f} MB, qalan catismayan {deficit/1048576:.1f} MB")
         if deficit >= before:
-            break   # hec ne elave olunmadi, dayan
-    total = sum(cat_bytes.values())
-    print(f"Faza 2 neticesi: {total/1048576:.1f} MB")
+            print("  Hec bir menbeden elave data tapilmadi.")
+            if not AUTO_RAISE_LIMIT:
+                print("  FAZA 2 dayandirilir. (AUTO_RAISE_LIMIT = True etsen, soz limiti artirilacaq)")
+            break
 else:
-    print("\nFaza 2 lazim deyil - kateqoriyalar hedefi doldurub.")
+    print("\nFaza 2 lazim deyil.")
 
+# ---------- FAZA 2B: soz limitini artirmaq (istege bagli) ----------
+if AUTO_RAISE_LIMIT:
+    for new_limit in (1000, 2000, 5000, 10000, 25000, 50000):
+        deficit = TOTAL_TARGET_BYTES - sum(cat_bytes.values())
+        if deficit <= 1024:
+            break
+        MAX_WORD_COUNT = new_limit
+        print(f"\n#### FAZA 2B: soz limiti {new_limit}-e qaldirildi, catismayan {deficit/1048576:.1f} MB ####")
+        for cat in FILL_ORDER:
+            deficit = TOTAL_TARGET_BYTES - sum(cat_bytes.values())
+            if deficit <= 1024:
+                break
+            got = pass_sources(cat, deficit, "a")
+            if got > 0:
+                print(f"  {cat}: +{got/1048576:.1f} MB")
+    print(f"Son soz limiti: {MAX_WORD_COUNT}")
 
-# ---------- FAZA 3: az_all.txt = TAM 500 MB ----------
-print("\n########## FAZA 3: az_all.txt yazilir (tam 500 MB) ##########")
+# =========== FAZA 3 ===========
+print("\n########## FAZA 3: az_all.txt (tam 500 MB) ##########")
 ALL_PATH = os.path.join(OUT_DIR, "az_all.txt")
 
 def cut_utf8(b, n):
-    """Bayt sayini n-e endirir, simvolu yarmlamadan."""
     b = b[:n]
     while b:
         try:
@@ -465,7 +621,6 @@ with open(ALL_PATH, "wb") as out:
                     break
                 remaining = TOTAL_TARGET_BYTES - written
                 if len(chunk) > remaining:
-                    # Son fayl: tam 500 MB-a catdiririq, soz ortasinda kesmirik
                     piece = cut_utf8(chunk, remaining)
                     for sep in (b"\n\n", b"\n"):
                         cut_at = piece.rfind(sep)
@@ -481,30 +636,26 @@ with open(ALL_PATH, "wb") as out:
     if written < TOTAL_TARGET_BYTES:
         gap = TOTAL_TARGET_BYTES - written
         out.write(b"\n" * gap)
-        written = TOTAL_TARGET_BYTES
         print(f"  (sona {gap} bayt bos setir elave edildi)")
 
-print(f"az_all.txt = {os.path.getsize(ALL_PATH)} bayt = {os.path.getsize(ALL_PATH)/1048576:.2f} MB")
-
-
-# ---------- NETICE ----------
+# =========== NETICE ===========
 print("\n================== UMUMI NETICE ==================")
-print(f"{'Fayl':32} {'MB':>10} {'Metn':>10}")
-print("-" * 56)
+print(f"{'Fayl':32} {'MB':>9} {'Metn':>9}")
+print("-" * 54)
 cat_total = 0
 for cat in TARGETS_MB:
-    mp = cat_bytes[cat] / 1048576
-    print(f"{cat:32} {mp:10.1f} {cat_docs[cat]:10}")
-    cat_total += mp
-print("-" * 56)
-all_mb = os.path.getsize(ALL_PATH) / 1048576
-print(f"{'KATEQORIYA CEMI':32} {cat_total:10.1f}")
-print(f"{'az_all.txt':32} {all_mb:10.2f}")
-print(f"\nHedef: 500.00 MB | Faktiki: {all_mb:.2f} MB")
-print(f"Bayt: {os.path.getsize(ALL_PATH)} / {TOTAL_TARGET_BYTES}")
+    mb = cat_bytes[cat] / 1048576
+    print(f"{cat:32} {mb:9.1f} {cat_docs[cat]:9}")
+    cat_total += mb
+print("-" * 54)
+all_size = os.path.getsize(ALL_PATH)
+print(f"{'KATEQORIYA CEMI':32} {cat_total:9.1f}")
+print(f"{'az_all.txt':32} {all_size/1048576:9.2f}")
+print(f"\nHedef: 500.00 MB | Faktiki: {all_size/1048576:.2f} MB")
+print(f"Bayt: {all_size} / {TOTAL_TARGET_BYTES}")
 print(f"Unikal mezmun soz: {len(word_counts)}")
 print(f"En cox tekrarlanan 10 soz: {word_counts.most_common(10)}")
-print("\nFiltr statistikasi (ne qeder atildi):")
+print("\nFiltr statistikasi:")
 for k, v in stats.most_common():
     print(f"  {k}: {v}")
 print("\nCixis qovlugu:", OUT_DIR)
@@ -518,7 +669,7 @@ print("\nHazirdir! Kaggle -> Save Version -> Output Dataset")
 
 ## Nəticə
 
-Hər şey bitəndə `/kaggle/working/az_data/` qovluğunda:
+`/kaggle/working/az_data/`:
 
 ```
 01_web_news.txt               175 MB
@@ -526,16 +677,12 @@ Hər şey bitəndə `/kaggle/working/az_data/` qovluğunda:
 03_encyclopedic_technical.txt 100 MB
 04_official_legal.txt          50 MB
 05_fiction.txt                 50 MB
-az_all.txt               TAM 500 MB  <-- hamısı bir yerdə
+az_all.txt               TAM 500 MB
 ```
 
-**`az_all.txt` dəqiq 500 MB-dır** (524 288 000 bayt). Kod sonda özü yoxlayır və çap edir:
+`az_all.txt` dəqiq 524 288 000 bayt. Kod sonda çap edir:
 
 ```
 Hedef: 500.00 MB | Faktiki: 500.00 MB
 Bayt: 524288000 / 524288000
 ```
-
-Əgər kateqoriyalardan biri dolmasa, kod FAZA 2-də çatışmayan hissəni başqa mənbədən götürür — yenə də tam 500 olur.
-
-Sonra **Save Version** → Output Dataset kimi saxla.

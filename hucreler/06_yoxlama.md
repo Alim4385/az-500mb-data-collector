@@ -2,7 +2,9 @@
 
 **MÜTLƏQ** · Vaxt: 30–60 san
 
-Hansı mənbə işləyir — uzun işə başlamazdan əvvəl.
+Hər mənbədən 1 nümunə oxuyur. Uzun işə başlamazdan **əvvəl** mütləq.
+
+**Görməlisən:** `ISLEYEN: 10 | ISLEMEYEN: 4` (4-ü token istəyir, normaldır)
 
 ```python
 # ------------------------------------------------------------

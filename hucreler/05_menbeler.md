@@ -1,10 +1,8 @@
 # Hüceyrə 5 — Mənbələr
 
-**MÜTLƏQ**
+**MÜTLƏQ** · Vaxt: dərhal
 
-Hansı datasetdən nə götürüləcəyi. Hamısı **açıq** datasetlərdir (token olmadan da işləyən).
-
-**Vaxt:** dərhal. Sonda `Menbe sayi: 14` və kateqoriya bölgüsünü çap edir.
+Hansı datasetdən nə götürülür.
 
 ```python
 # ------------------------------------------------------------

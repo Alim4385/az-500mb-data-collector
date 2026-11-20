@@ -1,6 +1,10 @@
-# Hüceyrə 3 — Şəkilçi / köməkçi sözlər
+# Hüceyrə 3 — Şəkilçi və köməkçi sözlər
 
-Bu siyahıdakı sözlər 500 limitindən **azaddır**, istənilən qədər ola bilər. Çünki onlar mənanı daşımır, sadəcə qrammatikadır.
+**MÜTLƏQ**
+
+Bu siyahıdakı sözlər 500 limitindən **azaddır**. Heç nə hesablamır, sadəcə siyahını yaradır.
+
+**Vaxt:** dərhal. Sonda `Azad soz sayi: 172` yazır.
 
 ```python
 EXEMPT_WORDS = {

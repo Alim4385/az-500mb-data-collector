@@ -1,5 +1,5 @@
-# AZ 500 MB DATA YIGICI - KAGGLE UCUN
-# 8 hucre, KODLAR.md ile eyni
+# AZ 500 MB DATA YIGICI - SIFIRDAN VERSIYA
+# KODLAR.md ile tam eyni (8 hucre)
 
 import os
 import re
@@ -39,11 +39,12 @@ SHORT_MIN, SHORT_MAX = 200, 1000
 LONG_MIN, LONG_MAX = 1000, 20000
 SHORT_RATIO = 0.70
 LONG_RATIO = 0.30
-MAX_WORD_COUNT = 500
+MAX_WORD_COUNT = 3000   # 500 ile 500 MB mumkun deyil (README-ye bax)
 
 print(f"Cixis qovlugu: {OUT_DIR}")
 print(f"Hedefler: {TARGETS_MB}")
 print(f"Soz limiti: max {MAX_WORD_COUNT} defe")
+print("Qeyd: 500 limiti ile 500 MB yigmaq mumkun deyil - ona gore 3000")
 print("HUCeyre 1 HAZIRDIR - novbeti hucreye kec")
 
 # ------------------------------------------------------------
@@ -97,7 +98,6 @@ EXEMPT_WORDS = {
 EXEMPT_MIN_LEN = 3
 print(f"Azad soz sayi: {len(EXEMPT_WORDS)}")
 
-AZ_CHARS = set("eqciOSU EQCIOSU".replace(" ", ""))  # placeholder, real check below
 AZ_CHARS = set(["\u0259", "\u011f", "\u00e7", "\u0131", "\u00f6", "\u015f", "\u00fc",
                 "\u018f", "\u011e", "\u00c7", "\u0130", "\u00d6", "\u015e", "\u00dc"])
 AZ_STOPWORDS = {
@@ -401,7 +401,8 @@ ADAPTERS = {"smoltalk": adapter_smoltalk, "opus": adapter_opus}
 print("MƏRHƏLƏ A baslayir...")
 print(f"Novbe sayi: {WORKERS}, tapsiriq: {TASKS}, her menbeden max {PER_SOURCE_LIMIT} sened\n")
 
-t_all = time.time() if "time" in dir() else None
+import importlib
+importlib.invalidate_caches()
 import time as _time
 T0 = _time.time()
 

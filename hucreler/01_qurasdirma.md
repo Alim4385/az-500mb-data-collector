@@ -1,6 +1,10 @@
-# Hüceyrə 1 — Quraşdırma + parametrlər
+# Hüceyrə 1 — Quraşdırma və parametrlər
 
-`datasets` Kaggle-da artıq var — yeniləməyə ehtiyac yoxdur. Pip sətri silinib.
+**MÜTLƏQ**
+
+Kitabxanaları yoxlayır (quraşdırmır — onsuz da var), çıxış qovluğunu və 5 kateqoriyanın MB hədəflərini təyin edir.
+
+**Vaxt:** 2–5 saniyə. Sonda `HUCEYRE 1 HAZIRDIR` yazısını görməlisən.
 
 ```python
 import os

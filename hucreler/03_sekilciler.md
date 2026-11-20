@@ -2,7 +2,9 @@
 
 **MÜTLƏQ** · Vaxt: dərhal
 
-Bu sözlər limitdən azaddır.
+Bu sözlər 500/3000 limitindən azaddır.
+
+**Görməlisən:** `Azad soz sayi: 172`
 
 ```python
 EXEMPT_WORDS = {

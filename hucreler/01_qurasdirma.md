@@ -2,7 +2,9 @@
 
 **MÜTLƏQ** · Vaxt: 2–5 san
 
-Kitabxanaları yoxlayır, çıxış qovluğunu və MB hədəflərini təyin edir.
+Kitabxanaları yoxlayır, qovluqları və hədəfləri təyin edir.
+
+**Görməlisən:** `HUCEYRE 1 HAZIRDIR - novbeti hucreye kec`
 
 ```python
 import os
@@ -43,10 +45,11 @@ SHORT_MIN, SHORT_MAX = 200, 1000
 LONG_MIN, LONG_MAX = 1000, 20000
 SHORT_RATIO = 0.70
 LONG_RATIO = 0.30
-MAX_WORD_COUNT = 500
+MAX_WORD_COUNT = 3000   # 500 ile 500 MB mumkun deyil (README-ye bax)
 
 print(f"Cixis qovlugu: {OUT_DIR}")
 print(f"Hedefler: {TARGETS_MB}")
 print(f"Soz limiti: max {MAX_WORD_COUNT} defe")
+print("Qeyd: 500 limiti ile 500 MB yigmaq mumkun deyil - ona gore 3000")
 print("HUCeyre 1 HAZIRDIR - novbeti hucreye kec")
 ```

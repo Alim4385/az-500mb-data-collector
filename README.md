@@ -16,6 +16,12 @@ Ayrı fayllar da var — [`hucreler/`](hucreler/) qovluğu:
 5. [05_menbeler](hucreler/05_menbeler.md)
 6. [06_yigma](hucreler/06_yigma.md)
 
+## Nəticə: `az_all.txt` = TAM 500 MB
+Kod 3 fazada işləyir:
+1. **FAZA 1** — hər kateqoriya öz MB hədəfinə
+2. **FAZA 2** — kateqoriya dolmasa, çatışmayan hissə başqa mənbədən doldurulur
+3. **FAZA 3** — `az_all.txt` dəqiq `524 288 000` bayt (500 MB) yazılır, söz ortasında kəsilmir
+
 ## Kateqoriyalar (cəmi 500 MB)
 | Fayl | MB |
 |---|---|

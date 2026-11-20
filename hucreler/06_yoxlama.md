@@ -1,10 +1,8 @@
 # Hüceyrə 6 — Mənbə yoxlaması
 
-**MÜTLƏQ**
+**MÜTLƏQ** · Vaxt: 30–60 san
 
-**Ən vacib addım.** Hər mənbədən 1 nümunə oxuyur — hansının işlədiyini göstərir.
-
-Uzun yığıma (1–3 saat) başlamazdan **əvvəl mütləq** işə sal. **Vaxt:** 30–60 saniyə.
+Hansı mənbə işləyir — uzun işə başlamazdan əvvəl.
 
 ```python
 # ------------------------------------------------------------

@@ -1,10 +1,8 @@
 # Hüceyrə 3 — Şəkilçi və köməkçi sözlər
 
-**MÜTLƏQ**
+**MÜTLƏQ** · Vaxt: dərhal
 
-Bu siyahıdakı sözlər 500 limitindən **azaddır**. Heç nə hesablamır, sadəcə siyahını yaradır.
-
-**Vaxt:** dərhal. Sonda `Azad soz sayi: 172` yazır.
+Bu sözlər limitdən azaddır.
 
 ```python
 EXEMPT_WORDS = {

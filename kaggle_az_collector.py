@@ -1,5 +1,6 @@
 # AZ 500 MB DATA YIGICI - KAGGLE UCUN
 # Hucre-hucre versiya: KODLAR.md
+# Bu fayl 7 hucrenin birlesmis halidir.
 
 import os
 import re
@@ -46,7 +47,6 @@ print(f"Hedefler: {TARGETS_MB}")
 print(f"Soz limiti: max {MAX_WORD_COUNT} defe")
 print("HUCeyre 1 HAZIRDIR - novbeti hucreye kec")
 
-
 # ------------------------------------------------------------
 # HUCEYRE 1B (YENI): HF TOKEN
 # Gated datasetler ucun lazimdir (CulturaX, OpenSubtitles2024,
@@ -69,7 +69,6 @@ if HF_TOKEN:
 else:
     print("[!] HF token yoxdur - gated datasetler atlanacaq, qalanlari isleyecek")
     print("    Kaggle -> Add-ons -> Secrets -> New secret, ad: HF_TOKEN")
-
 
 EXEMPT_WORDS = {
     "ve", "ile", "ucun", "kimi", "qarsi", "sonra", "evvel", "daxil",
@@ -98,7 +97,6 @@ EXEMPT_WORDS = {
 }
 EXEMPT_MIN_LEN = 3
 print(f"Azad soz sayi: {len(EXEMPT_WORDS)}")
-
 
 AZ_CHARS = set("eqciOSU EQCIOSU".replace(" ", ""))  # placeholder, real check below
 AZ_CHARS = set(["\u0259", "\u011f", "\u00e7", "\u0131", "\u00f6", "\u015f", "\u00fc",
@@ -206,7 +204,6 @@ def is_long(text):
 
 print("Filtr funksiyalari hazirdir")
 
-
 # ------------------------------------------------------------
 # MENBELER - hamisi ACIQ (gated olmayan) datasetler
 # Sira ile yoxlanir: biri islemese novbetisine kecir.
@@ -262,7 +259,6 @@ print("Menbe sayi:", sum(len(v) for v in SOURCES.values()))
 for cat, srcs in SOURCES.items():
     print(f"  {cat}: {len(srcs)} menbe")
 
-
 # ------------------------------------------------------------
 # MENBE YOXLAMASI - her menbeden 1 numune oxuyur
 # Ishlemezden evvel bunu ise salin (30 saniye)
@@ -301,7 +297,6 @@ if islemeyen:
         print("  -", n)
 print("\nQeyd: 'gated' xetasi = HF token lazimdir (yuxaridaki kimi).")
 print("Diger xetalar olsa, hemin menbe sadece atlanacaq, qalanlar isleyecek.")
-
 
 # ------------------------------------------------------------
 # HUCEYRE 6: Esas dovr - yig, filtrle, yaz

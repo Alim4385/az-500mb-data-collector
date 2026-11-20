@@ -4,48 +4,23 @@ Azərbaycan dilində 500 MB təmiz mətn (`.txt`) yığmaq üçün kod. LLM / NL
 
 ## 👉 KODLAR: [KODLAR.md](KODLAR.md)
 
-Hüceyrə-hüceyrə kod. Kaggle-da notebook aç, hər hüceyrəni sıra ilə kopyala-yapışdır.
+**7 hüceyrə, 1 → 7 sıra ilə.** Hər hüceyrə ayrı fayl kimi də var:
 
-Ayrı fayllar — [`hucreler/`](hucreler/):
+| # | Fayl | Vacib? | Vaxt |
+|---|---|---|---|
+| 1 | [01_qurasdirma](hucreler/01_qurasdirma.md) | MÜTLƏQ | 2–5 san |
+| 2 | [02_hf_token](hucreler/02_hf_token.md) | istəyə bağlı | 2 san |
+| 3 | [03_sekilciler](hucreler/03_sekilciler.md) | MÜTLƏQ | dərhal |
+| 4 | [04_filtrler](hucreler/04_filtrler.md) | MÜTLƏQ | dərhal |
+| 5 | [05_menbeler](hucreler/05_menbeler.md) | MÜTLƏQ | dərhal |
+| 6 | [06_yoxlama](hucreler/06_yoxlama.md) | MÜTLƏQ | 30–60 san |
+| 7 | [07_yigma](hucreler/07_yigma.md) | MÜTLƏQ | 1–3 saat |
 
-| # | Fayl |
-|---|---|
-| 1 | [01_qurasdirma](hucreler/01_qurasdirma.md) — quraşdırma + parametrlər |
-| 1B | [01b_token](hucreler/01b_token.md) — **HF token (yeni)** |
-| 2 | [02_sekilciler](hucreler/02_sekilciler.md) — şəkilçi sözlər |
-| 3 | [03_filtrler](hucreler/03_filtrler.md) — filtr funksiyaları |
-| 4 | [04_menbeler](hucreler/04_menbeler.md) — **mənbələr (yeniləndi)** |
-| 4B | [04b_yoxlama](hucreler/04b_yoxlama.md) — **mənbə yoxlaması (yeni)** |
-| 5 | [05_yigma](hucreler/05_yigma.md) — yığım |
-
-## ⚠️ Nə dəyişdi (v2)
-Köhnə mənbələr işləmirdi:
-- `oscar-corpus/OSCAR-2301`, `azcorpus` → **manual gated** (icazə tələb edir)
-- `statmt/cc100`, `open_subtitles` → **Python skript** (yeni `datasets` qəbul etmir)
-- `OpenSubtitles2024`, `eqanun`, `aze-books`, `CulturaX` → **auto gated** (token lazım)
-
-İndi hamısı **açıq datasetlərlə** əvəz olundu.
-
-## Mənbələr (v2)
-| Kateqoriya | Mənbə | Gated? |
-|---|---|---|
-| Veb + Xəbər | `HuggingFaceFW/fineweb-2` (azj_Latn) | ❌ |
-| | `LocalDoc/community_oscar_azerbaijani` | ❌ |
-| | `LocalDoc/news_azerbaijan_2`, `news_azerbaijan` | ❌ |
-| | `uonlp/CulturaX` (az) | ✅ token |
-| Söhbət + Altyazı | `LocalDoc/smoltalk_az` | ❌ |
-| | `Helsinki-NLP/opus-100` (az-en) | ❌ |
-| | `Helsinki-NLP/OpenSubtitles2024` (az-en) | ✅ token |
-| Ensiklopedik | `wikimedia/wikipedia` (20231101.az) | ❌ |
-| Rəsmi / Hüquqi | `LocalDoc/azerbaijan_legislation` | ❌ |
-| Bədii | `LocalDoc/books_dataset` (ID üzrə birləşdirilir) | ❌ |
-
-## HF token (tövsiyə olunur)
-1. https://huggingface.co/settings/tokens → **New token → Read**
-2. Kaggle → **Add-ons → Secrets → New secret**: ad `HF_TOKEN`
+## Kaggle
+- Settings: **Internet = ON**, Accelerator = **GPU T4**
+- Çıxış: `/kaggle/working/az_data/`
 
 ## Nəticə
-`/kaggle/working/az_data/`:
 ```
 01_web_news.txt               175 MB
 02_conversation_subtitle.txt  125 MB
@@ -54,15 +29,25 @@ Köhnə mənbələr işləmirdi:
 05_fiction.txt                 50 MB
 az_all.txt               TAM 500 MB
 ```
-`az_all.txt` = dəqiq 524 288 000 bayt.
+`az_all.txt` = dəqiq **524 288 000 bayt**.
+
+## Mənbələr — hamısı AÇIQ (gated olmayan)
+| Kateqoriya | Mənbə |
+|---|---|
+| Veb + Xəbər | `fineweb-2` (azj_Latn), `community_oscar_azerbaijani`, `news_azerbaijan_2`, `news_azerbaijan` |
+| Söhbət + Altyazı | `smoltalk_az`, `opus-100` (az-en) |
+| Ensiklopedik | `wikimedia/wikipedia` (20231101.az) |
+| Rəsmi / Hüquqi | `azerbaijan_legislation` |
+| Bədii | `books_dataset` (ID üzrə birləşdirilir) |
+| + token varsa | `CulturaX`, `OpenSubtitles2024`, `eqanun`, `aze-books` |
 
 ## Filtr
 - Dəqiq dublikat (hash), dil yoxlaması, keyfiyyət (Gopher/FineWeb)
-- Uzunluq 200–20000 simvol, 70% qısa / 30% uzun
-- **Məzmun sözü max 500** (şəkilçilər azad, limit keçsə bütün mətn atılır)
-- `AUTO_RAISE_LIMIT = True` → limit doldurmağa çatmırsa avtomatik artır (1000, 2000, 5000...)
+- Uzunluq 200–20000 simvol, **70% qısa / 30% uzun**
+- **Məzmun sözü max 500** — şəkilçi/köməkçi sözlər azad, limit keçsə bütün mətn atılır
+- `AUTO_RAISE_LIMIT = True` → limit çatmırsa avtomatik artır (1000, 2000, 5000...)
 
 ## Fayllar
-- `KODLAR.md` — bütün hüceyrələr
-- `hucreler/` — hər hüceyrə ayrı
+- `KODLAR.md` — bütün hüceyrələr bir yerdə
+- `hucreler/` — hər hüceyrə ayrı fayl
 - `kaggle_az_collector.py` — hamısı bir `.py` faylda

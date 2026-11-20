@@ -1,59 +1,68 @@
 # AZ 500MB Data Collector
 
-Azərbaycan dilində 500 MB təmiz mətn (`.txt`) yığmaq üçün kod.
-LLM / NLLB üçün keyfiyyətli, söz əhatəsi geniş data.
+Azərbaycan dilində 500 MB təmiz mətn (`.txt`) yığmaq üçün kod. LLM / NLLB üçün.
 
 ## 👉 KODLAR: [KODLAR.md](KODLAR.md)
 
-Hüceyrə-hüceyrə kod. Kaggle-da notebook aç, hər hüceyrəni sıra ilə kopyala-yapışdır, işə sal.
+Hüceyrə-hüceyrə kod. Kaggle-da notebook aç, hər hüceyrəni sıra ilə kopyala-yapışdır.
 
-Ayrı fayllar da var — [`hucreler/`](hucreler/) qovluğu:
+Ayrı fayllar — [`hucreler/`](hucreler/):
 
-1. [01_quraşdırma](hucreler/01_qurasdirma.md)
-2. [02_parametrler](hucreler/02_parametrler.md)
-3. [03_sekilciler](hucreler/03_sekilciler.md)
-4. [04_filtrler](hucreler/04_filtrler.md)
-5. [05_menbeler](hucreler/05_menbeler.md)
-6. [06_yigma](hucreler/06_yigma.md)
-
-## Nəticə: `az_all.txt` = TAM 500 MB
-Kod 3 fazada işləyir:
-1. **FAZA 1** — hər kateqoriya öz MB hədəfinə
-2. **FAZA 2** — kateqoriya dolmasa, çatışmayan hissə başqa mənbədən doldurulur
-3. **FAZA 3** — `az_all.txt` dəqiq `524 288 000` bayt (500 MB) yazılır, söz ortasında kəsilmir
-
-## Kateqoriyalar (cəmi 500 MB)
-| Fayl | MB |
+| # | Fayl |
 |---|---|
-| 01_web_news | 175 |
-| 02_conversation_subtitle | 125 |
-| 03_encyclopedic_technical | 100 |
-| 04_official_legal | 50 |
-| 05_fiction | 50 |
+| 1 | [01_qurasdirma](hucreler/01_qurasdirma.md) — quraşdırma + parametrlər |
+| 1B | [01b_token](hucreler/01b_token.md) — **HF token (yeni)** |
+| 2 | [02_sekilciler](hucreler/02_sekilciler.md) — şəkilçi sözlər |
+| 3 | [03_filtrler](hucreler/03_filtrler.md) — filtr funksiyaları |
+| 4 | [04_menbeler](hucreler/04_menbeler.md) — **mənbələr (yeniləndi)** |
+| 4B | [04b_yoxlama](hucreler/04b_yoxlama.md) — **mənbə yoxlaması (yeni)** |
+| 5 | [05_yigma](hucreler/05_yigma.md) — yığım |
 
-## Filtr (sərt, LLM standartı)
-- Dəqiq dublikat silmə (hash)
-- Uzunluq: 200–20000 simvol (qısa 200–1000, uzun 1000–20000)
-- Dil yoxlaması (AZ hərfləri + stopword nisbəti)
-- Keyfiyyət: hərf nisbəti, rəqəm, boilerplate, söz təkrarı, punktuasiya
-- **Məzmun sözü max 500 dəfə** — şəkilçi/köməkçi sözlər azaddır, limit keçsə bütün mətn atılır
-- Balans: 70% qısa / 30% uzun
+## ⚠️ Nə dəyişdi (v2)
+Köhnə mənbələr işləmirdi:
+- `oscar-corpus/OSCAR-2301`, `azcorpus` → **manual gated** (icazə tələb edir)
+- `statmt/cc100`, `open_subtitles` → **Python skript** (yeni `datasets` qəbul etmir)
+- `OpenSubtitles2024`, `eqanun`, `aze-books`, `CulturaX` → **auto gated** (token lazım)
 
-## Kaggle
-- Settings: **Internet = ON**, Accelerator = **GPU T4**
-- Çıxış: `/kaggle/working/az_data/`
-- Bitəndə **Save Version** → Output Dataset
+İndi hamısı **açıq datasetlərlə** əvəz olundu.
 
-## Mənbələr
-| Kateqoriya | Dataset |
-|---|---|
-| Veb + Xəbər | `oscar-corpus/OSCAR-2301` (az), `statmt/cc100` (az), `azcorpus/azcorpus_v0` (az_news) |
-| Söhbət + Altyazı | `Helsinki-NLP/OpenSubtitles2024` (az) |
-| Ensiklopedik | `wikimedia/wikipedia` (20231101.az), `azcorpus/azcorpus_v0` (az_wiki) |
-| Rəsmi / Hüquqi | `allmalab/eqanun` |
-| Bədii | `allmalab/aze-books`, `azcorpus/azcorpus_v0` (az_books) |
+## Mənbələr (v2)
+| Kateqoriya | Mənbə | Gated? |
+|---|---|---|
+| Veb + Xəbər | `HuggingFaceFW/fineweb-2` (azj_Latn) | ❌ |
+| | `LocalDoc/community_oscar_azerbaijani` | ❌ |
+| | `LocalDoc/news_azerbaijan_2`, `news_azerbaijan` | ❌ |
+| | `uonlp/CulturaX` (az) | ✅ token |
+| Söhbət + Altyazı | `LocalDoc/smoltalk_az` | ❌ |
+| | `Helsinki-NLP/opus-100` (az-en) | ❌ |
+| | `Helsinki-NLP/OpenSubtitles2024` (az-en) | ✅ token |
+| Ensiklopedik | `wikimedia/wikipedia` (20231101.az) | ❌ |
+| Rəsmi / Hüquqi | `LocalDoc/azerbaijan_legislation` | ❌ |
+| Bədii | `LocalDoc/books_dataset` (ID üzrə birləşdirilir) | ❌ |
+
+## HF token (tövsiyə olunur)
+1. https://huggingface.co/settings/tokens → **New token → Read**
+2. Kaggle → **Add-ons → Secrets → New secret**: ad `HF_TOKEN`
+
+## Nəticə
+`/kaggle/working/az_data/`:
+```
+01_web_news.txt               175 MB
+02_conversation_subtitle.txt  125 MB
+03_encyclopedic_technical.txt 100 MB
+04_official_legal.txt          50 MB
+05_fiction.txt                 50 MB
+az_all.txt               TAM 500 MB
+```
+`az_all.txt` = dəqiq 524 288 000 bayt.
+
+## Filtr
+- Dəqiq dublikat (hash), dil yoxlaması, keyfiyyət (Gopher/FineWeb)
+- Uzunluq 200–20000 simvol, 70% qısa / 30% uzun
+- **Məzmun sözü max 500** (şəkilçilər azad, limit keçsə bütün mətn atılır)
+- `AUTO_RAISE_LIMIT = True` → limit doldurmağa çatmırsa avtomatik artır (1000, 2000, 5000...)
 
 ## Fayllar
-- `KODLAR.md` — bütün hüceyrələr bir yerdə
-- `hucreler/` — hər hüceyrə ayrı fayl
-- `kaggle_az_collector.py` — eyni kod tək `.py` fayl kimi (istəsən birbaşa yükləyib işə sal)
+- `KODLAR.md` — bütün hüceyrələr
+- `hucreler/` — hər hüceyrə ayrı
+- `kaggle_az_collector.py` — hamısı bir `.py` faylda
